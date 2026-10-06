@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Red Among Us Crewmate Favicon -->
+  <rect width="100" height="100" rx="25" fill="#070a13" />
+  <!-- Backpack -->
+  <path d="M 25 40 C 15 40 12 50 12 60 L 12 75 C 12 85 15 88 25 88 L 30 88 L 30 40 Z" fill="#991b1b" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+  <!-- Body -->
+  <path d="M 40 22 C 72 22 78 40 78 62 L 78 88 C 78 95 72 96 66 96 L 64 96 C 58 96 56 92 56 86 L 56 78 L 48 78 L 48 86 C 48 92 46 96 40 96 L 38 96 C 32 96 26 95 26 88 L 26 58 C 26 40 30 22 40 22 Z" fill="#ef4444" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+  <!-- Visor -->
+  <path d="M 48 38 C 76 38 86 42 86 54 C 86 66 76 70 48 70 C 36 70 34 66 34 54 C 34 42 36 38 48 38 Z" fill="#93c5fd" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+  <ellipse cx="72" cy="50" rx="4" ry="2" fill="#ffffff" opacity="0.8" transform="rotate(-15 72 50)" />
+  <!-- Party Hat -->
+  <polygon points="52,4 34,26 70,26" fill="#f43f5e" stroke="#000" stroke-width="3" stroke-linejoin="round" />
+  <circle cx="52" cy="4" r="4" fill="#facc15" stroke="#000" stroke-width="2" />
+</svg>
