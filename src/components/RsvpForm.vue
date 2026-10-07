@@ -40,6 +40,8 @@ const formattedWhatsAppUrl = computed(() => {
   return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
 })
 
+const emit = defineEmits(['confirm', 'viewShip'])
+
 const handleSubmit = () => {
   if (!guestName.value.trim()) {
     sounds.playCardError()
@@ -56,6 +58,15 @@ const handleSubmit = () => {
       spread: 70,
       origin: { y: 0.6 },
     })
+
+    emit('confirm', {
+      name: guestName.value.trim(),
+      color: props.crewmate.color,
+      shadowColor: props.crewmate.shadowColor,
+      hat: props.crewmate.hat,
+      colorName: props.crewmate.colorName,
+      companions: companions.value,
+    })
   }
 
   // Open WhatsApp in new tab
@@ -64,16 +75,16 @@ const handleSubmit = () => {
 </script>
 
 <template>
-  <div id="confirmacion" class="w-full max-w-2xl mx-auto my-12 px-4 scroll-mt-20">
+  <div id="confirmacion" class="w-full max-w-2xl mx-auto py-2 px-1 sm:px-3">
     <div
-      class="bg-slate-900/95 border-2 border-emerald-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_40px_rgba(16,185,129,0.2)] relative overflow-hidden"
+      class="bg-slate-900/95 border-2 border-emerald-500/40 rounded-3xl p-4 sm:p-6 shadow-[0_0_30px_rgba(16,185,129,0.2)] relative overflow-hidden"
     >
       <!-- Title -->
-      <div class="text-center mb-6">
+      <div class="text-center mb-5">
         <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 font-mono text-xs font-bold uppercase rounded-full border border-emerald-500/30">
           REGISTRO DE ASISTENCIA
         </span>
-        <h3 class="text-2xl sm:text-3xl font-black text-white mt-2">
+        <h3 class="text-2xl sm:text-3xl font-black text-white mt-1.5">
           Confirma tu Tripulación (RSVP)
         </h3>
         <p class="text-xs sm:text-sm text-slate-300 mt-1">
@@ -82,19 +93,19 @@ const handleSubmit = () => {
       </div>
 
       <!-- SUCCESS BOARDING PASS PREVIEW -->
-      <div v-if="isSubmitted" class="text-center py-6 animate-fade-in">
-        <div class="w-16 h-16 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">
+      <div v-if="isSubmitted" class="text-center py-4 animate-fade-in">
+        <div class="w-14 h-14 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center text-2xl mx-auto mb-2">
           🎫
         </div>
         <h4 class="text-xl font-black text-emerald-300">
           ¡REGISTRO ENVIADO CON ÉXITO!
         </h4>
-        <p class="text-sm text-slate-300 max-w-md mx-auto mt-2">
-          Gracias {{ guestName }}. Tu reporte de tripulante ha sido enviado a WhatsApp para la fiesta de {{ EVENT_CONFIG.celebrant.name }}.
+        <p class="text-xs sm:text-sm text-slate-300 max-w-md mx-auto mt-1.5">
+          ¡Gracias {{ guestName }}! Tu reporte de tripulante ha sido enviado a WhatsApp para la fiesta de {{ EVENT_CONFIG.celebrant.name }}.
         </p>
 
         <!-- Boarding Pass Card -->
-        <div class="mt-6 max-w-md mx-auto bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-2 border-emerald-400/60 rounded-2xl p-4 shadow-xl text-left flex items-center gap-4">
+        <div class="mt-5 max-w-md mx-auto bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-2 border-emerald-400/60 rounded-2xl p-4 shadow-xl text-left flex items-center gap-4">
           <div class="flex-shrink-0">
             <CrewmateAvatar
               :color="crewmate.color"
@@ -115,17 +126,26 @@ const handleSubmit = () => {
               Color: {{ crewmate.colorName || 'Cian' }} • Acompañantes: +{{ companions }}
             </p>
             <p class="text-[11px] text-yellow-400 font-bold">
-              ESTADO: TRIPULANTE AUTORIZADO ✅
+              ESTADO: TRIPULANTE EN LA NAVE ✅
             </p>
           </div>
         </div>
 
-        <button
-          @click="isSubmitted = false"
-          class="mt-6 text-xs font-mono text-cyan-400 hover:text-cyan-200 underline cursor-pointer"
-        >
-          Editar información de registro
-        </button>
+        <!-- Action Buttons -->
+        <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <button
+            @click="emit('viewShip')"
+            class="w-full sm:w-auto py-3 px-6 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black font-mono text-xs sm:text-sm uppercase rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+          >
+            <span>🚀 ¡Ver a mi tripulante en la reunión!</span>
+          </button>
+          <button
+            @click="isSubmitted = false"
+            class="text-xs font-mono text-cyan-400 hover:text-cyan-200 underline cursor-pointer"
+          >
+            Editar datos
+          </button>
+        </div>
       </div>
 
       <!-- RSVP FORM -->

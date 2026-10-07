@@ -330,6 +330,48 @@ class SoundEngine {
     osc.stop(now + 0.3)
   }
 
+  // Crewmate pop / squeak when tapped
+  playPop() {
+    if (this.muted) return
+    this.init()
+    if (!this.ctx) return
+
+    const now = this.ctx.currentTime
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(320, now)
+    osc.frequency.exponentialRampToValueAtTime(780, now + 0.12)
+    gain.gain.setValueAtTime(0.25, now)
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14)
+    osc.connect(gain)
+    gain.connect(this.ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.14)
+  }
+
+  // Welcome new crewmate chime
+  playJoin() {
+    if (this.muted) return
+    this.init()
+    if (!this.ctx) return
+
+    const notes = [440, 554.37, 659.25, 880]
+    notes.forEach((freq, idx) => {
+      const now = this.ctx.currentTime + idx * 0.09
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(freq, now)
+      gain.gain.setValueAtTime(0.2, now)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35)
+      osc.connect(gain)
+      gain.connect(this.ctx.destination)
+      osc.start(now)
+      osc.stop(now + 0.35)
+    })
+  }
+
   toggleBgm() {
     if (this.isBgmPlaying) {
       this.stopBgm()

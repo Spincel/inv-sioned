@@ -54,8 +54,8 @@ const emitChange = () => {
 </script>
 
 <template>
-  <div class="w-full max-w-3xl mx-auto my-10 px-4">
-    <div class="bg-slate-900/95 border-2 border-purple-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_30px_rgba(168,85,247,0.2)]">
+  <div class="w-full max-w-2xl mx-auto py-2 px-1 sm:px-3">
+    <div class="bg-slate-900/95 border-2 border-purple-500/40 rounded-3xl p-4 sm:p-6 shadow-[0_0_30px_rgba(168,85,247,0.2)]">
       <!-- Section Title -->
       <div class="text-center mb-6">
         <span class="px-3 py-1 bg-purple-500/20 text-purple-300 font-mono text-xs font-bold uppercase rounded-full border border-purple-500/30">

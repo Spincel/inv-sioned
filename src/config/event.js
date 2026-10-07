@@ -16,9 +16,9 @@ export const EVENT_CONFIG = {
   },
   dateTime: {
     // Fecha para el contador regresivo (Formato ISO: YYYY-MM-DDTHH:mm:ss)
-    targetDate: '2026-10-24T16:00:00',
-    displayDate: 'Sábado, 24 de Octubre de 2026',
-    displayTime: '4:00 PM - 8:30 PM',
+    targetDate: '2026-10-25T15:00:00',
+    displayDate: 'Domingo, 25 de Octubre de 2026',
+    displayTime: '3:00 PM',
   },
   location: {
     name: 'Base Estelar "Salón de Eventos Los Olivos"',

@@ -14,12 +14,12 @@ const openWaze = () => {
 </script>
 
 <template>
-  <div id="detalles" class="w-full max-w-4xl mx-auto my-12 px-4 scroll-mt-20">
-    <div class="text-center mb-8">
+  <div id="detalles" class="w-full max-w-3xl mx-auto py-2 px-1 sm:px-3">
+    <div class="text-center mb-6">
       <span class="px-3 py-1 bg-cyan-500/20 text-cyan-300 font-mono text-xs font-bold uppercase rounded-full border border-cyan-500/30">
         DATOS DE NAVEGACIÓN
       </span>
-      <h2 class="text-3xl sm:text-4xl font-black text-white mt-2">
+      <h2 class="text-2xl sm:text-3xl font-black text-white mt-1.5">
         Coordenadas de la Misión
       </h2>
       <p class="text-slate-300 text-xs sm:text-sm mt-1 max-w-md mx-auto">

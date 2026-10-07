@@ -144,10 +144,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div id="minijuego" class="w-full max-w-4xl mx-auto my-12 px-4 scroll-mt-20">
+  <div id="minijuego" class="w-full max-w-3xl mx-auto py-2 px-1 sm:px-3">
     <!-- Panel Outer Shell styled like Among Us Task Station -->
     <div
-      class="bg-slate-900/90 border-4 border-slate-700 rounded-3xl p-5 sm:p-7 shadow-[0_0_40px_rgba(0,0,0,0.8)] relative overflow-hidden"
+      class="bg-slate-900/90 border-4 border-slate-700 rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(0,0,0,0.8)] relative overflow-hidden"
     >
       <!-- Task Header & Global Progress Bar -->
       <div class="mb-6">

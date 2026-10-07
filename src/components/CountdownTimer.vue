@@ -51,6 +51,13 @@ const googleCalendarUrl = computed(() => {
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${loc}`
 })
 
+defineProps({
+  compact: {
+    type: Boolean,
+    default: false,
+  },
+})
+
 const handleCalendarClick = () => {
   sounds.playBeep(700, 0.1)
   window.open(googleCalendarUrl.value, '_blank')
@@ -58,79 +65,92 @@ const handleCalendarClick = () => {
 </script>
 
 <template>
-  <div class="relative w-full max-w-xl mx-auto my-6 px-4">
+  <div class="relative w-full mx-auto" :class="compact ? 'max-w-md px-2' : 'max-w-xl my-6 px-4'">
     <!-- Panel Container with glowing border -->
     <div
-      class="bg-slate-900/95 border-2 border-cyan-400/50 rounded-2xl p-5 shadow-[0_0_25px_rgba(6,182,212,0.25)] relative overflow-hidden"
+      class="bg-slate-900/95 border-2 border-cyan-400/50 rounded-2xl shadow-[0_0_20px_rgba(6,182,212,0.25)] relative overflow-hidden"
+      :class="compact ? 'p-2.5 sm:p-3' : 'p-5'"
     >
       <!-- Top Cyber Decors -->
-      <div class="flex items-center justify-between mb-4 border-b border-cyan-500/30 pb-2">
-        <div class="flex items-center gap-2">
-          <span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-          <span class="text-xs uppercase tracking-widest font-mono text-cyan-300 font-bold">
-            CUENTA REGRESIVA DE LA MISIÓN
+      <div
+        class="flex items-center justify-between border-b border-cyan-500/30"
+        :class="compact ? 'mb-2 pb-1 text-[10px]' : 'mb-4 pb-2 text-xs'"
+      >
+        <div class="flex items-center gap-1.5">
+          <span class="inline-block w-2 h-2 rounded-full bg-red-500 animate-ping" />
+          <span class="uppercase tracking-widest font-mono text-cyan-300 font-bold truncate">
+            {{ compact ? 'DESPEGUE: 25 OCT • 3:00 PM' : 'CUENTA REGRESIVA DE LA MISIÓN' }}
           </span>
         </div>
-        <span class="text-[11px] font-mono text-cyan-400/70">
-          SECTOR: THE SKELD
+        <span class="font-mono text-cyan-400/70" :class="compact ? 'text-[9px]' : 'text-[11px]'">
+          THE SKELD
         </span>
       </div>
 
       <!-- Time blocks grid -->
-      <div v-if="!isStarted" class="grid grid-cols-4 gap-2 sm:gap-3 text-center">
+      <div v-if="!isStarted" class="grid grid-cols-4 gap-1.5 sm:gap-2 text-center">
         <!-- Days -->
-        <div class="bg-black/60 rounded-xl p-2.5 sm:p-3 border border-cyan-500/20 flex flex-col items-center justify-center">
-          <span class="font-mono text-2xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]">
+        <div class="bg-black/70 rounded-xl border border-cyan-500/30 flex flex-col items-center justify-center" :class="compact ? 'py-1 px-1' : 'p-2.5 sm:p-3'">
+          <span
+            class="font-mono font-extrabold text-white tracking-tight"
+            :class="compact ? 'text-lg sm:text-2xl' : 'text-2xl sm:text-4xl'"
+          >
             {{ String(days).padStart(2, '0') }}
           </span>
-          <span class="text-[10px] sm:text-xs uppercase font-bold text-cyan-400 tracking-wider mt-1">
+          <span class="uppercase font-bold text-cyan-400 tracking-wider" :class="compact ? 'text-[8px] sm:text-[10px]' : 'text-[10px] sm:text-xs mt-1'">
             Días
           </span>
         </div>
 
         <!-- Hours -->
-        <div class="bg-black/60 rounded-xl p-2.5 sm:p-3 border border-cyan-500/20 flex flex-col items-center justify-center">
-          <span class="font-mono text-2xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]">
+        <div class="bg-black/70 rounded-xl border border-cyan-500/30 flex flex-col items-center justify-center" :class="compact ? 'py-1 px-1' : 'p-2.5 sm:p-3'">
+          <span
+            class="font-mono font-extrabold text-white tracking-tight"
+            :class="compact ? 'text-lg sm:text-2xl' : 'text-2xl sm:text-4xl'"
+          >
             {{ String(hours).padStart(2, '0') }}
           </span>
-          <span class="text-[10px] sm:text-xs uppercase font-bold text-cyan-400 tracking-wider mt-1">
+          <span class="uppercase font-bold text-cyan-400 tracking-wider" :class="compact ? 'text-[8px] sm:text-[10px]' : 'text-[10px] sm:text-xs mt-1'">
             Horas
           </span>
         </div>
 
         <!-- Minutes -->
-        <div class="bg-black/60 rounded-xl p-2.5 sm:p-3 border border-cyan-500/20 flex flex-col items-center justify-center">
-          <span class="font-mono text-2xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]">
+        <div class="bg-black/70 rounded-xl border border-cyan-500/30 flex flex-col items-center justify-center" :class="compact ? 'py-1 px-1' : 'p-2.5 sm:p-3'">
+          <span
+            class="font-mono font-extrabold text-white tracking-tight"
+            :class="compact ? 'text-lg sm:text-2xl' : 'text-2xl sm:text-4xl'"
+          >
             {{ String(minutes).padStart(2, '0') }}
           </span>
-          <span class="text-[10px] sm:text-xs uppercase font-bold text-cyan-400 tracking-wider mt-1">
-            Minutos
+          <span class="uppercase font-bold text-cyan-400 tracking-wider" :class="compact ? 'text-[8px] sm:text-[10px]' : 'text-[10px] sm:text-xs mt-1'">
+            Min
           </span>
         </div>
 
         <!-- Seconds -->
-        <div class="bg-black/60 rounded-xl p-2.5 sm:p-3 border border-pink-500/30 flex flex-col items-center justify-center">
-          <span class="font-mono text-2xl sm:text-4xl font-extrabold text-pink-400 tracking-tight drop-shadow-[0_0_8px_rgba(236,72,153,0.8)] animate-pulse">
+        <div class="bg-black/70 rounded-xl border border-pink-500/40 flex flex-col items-center justify-center" :class="compact ? 'py-1 px-1' : 'p-2.5 sm:p-3'">
+          <span
+            class="font-mono font-extrabold text-pink-400 tracking-tight animate-pulse"
+            :class="compact ? 'text-lg sm:text-2xl' : 'text-2xl sm:text-4xl'"
+          >
             {{ String(seconds).padStart(2, '0') }}
           </span>
-          <span class="text-[10px] sm:text-xs uppercase font-bold text-pink-400 tracking-wider mt-1">
-            Segundos
+          <span class="uppercase font-bold text-pink-400 tracking-wider" :class="compact ? 'text-[8px] sm:text-[10px]' : 'text-[10px] sm:text-xs mt-1'">
+            Seg
           </span>
         </div>
       </div>
 
       <!-- In Progress / Today Message -->
-      <div v-else class="text-center py-4">
-        <p class="text-2xl font-bold text-yellow-400 animate-bounce">
-          🎉 ¡LA MISIÓN HA COMENZADO! 🎉
-        </p>
-        <p class="text-sm text-cyan-200 mt-1">
-          ¡Nos vemos en la nave para festejar a {{ EVENT_CONFIG.celebrant.name }}!
+      <div v-else class="text-center py-2">
+        <p class="font-bold text-yellow-400 animate-bounce" :class="compact ? 'text-sm' : 'text-2xl'">
+          🎉 ¡MISIÓN EN CURSO! 🎉
         </p>
       </div>
 
-      <!-- Save to Calendar Button -->
-      <div class="mt-4 pt-3 border-t border-cyan-500/20 flex justify-center">
+      <!-- Save to Calendar Button (only if not compact) -->
+      <div v-if="!compact" class="mt-4 pt-3 border-t border-cyan-500/20 flex justify-center">
         <button
           @click="handleCalendarClick"
           class="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 active:scale-95 text-cyan-300 hover:text-white border border-cyan-400/40 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer shadow-sm hover:shadow-[0_0_12px_rgba(6,182,212,0.4)]"
