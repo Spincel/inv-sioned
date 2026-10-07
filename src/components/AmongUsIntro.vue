@@ -7,28 +7,54 @@ import CrewmateAvatar from './CrewmateAvatar.vue'
 
 const emit = defineEmits(['complete'])
 
-// Intro sequence state: 'prompt' -> 'reveal'
+// Sequence: 'prompt' -> 'button_push' -> 'meeting_reveal'
 const step = ref('prompt')
+const isButtonPushed = ref(false)
 const isTransitioningOut = ref(false)
 
+// 1. Click "¡SÍ, ESTOY LISTO!" -> Lleva a la estación del botón rojo
 const handleReadyClick = () => {
-  sounds.playRoleReveal()
-  step.value = 'reveal'
+  sounds.playBeep(650, 0.08)
+  step.value = 'button_push'
 }
 
-const handleJoinCrew = () => {
+// 2. Niño presiona el botón rojo de emergencia
+const handlePressEmergencyButton = () => {
+  if (isButtonPushed.value) return
+  isButtonPushed.value = true
+
+  // Sonido icónico de sirena
+  sounds.playEmergency()
+
+  // Confeti de alarma
+  confetti({
+    particleCount: 50,
+    spread: 70,
+    origin: { y: 0.5 },
+    colors: ['#ef4444', '#dc2626', '#f59e0b'],
+  })
+
+  // Transición a la pantalla de reunión de fiesta
+  setTimeout(() => {
+    sounds.playRoleReveal()
+    step.value = 'meeting_reveal'
+  }, 1100)
+}
+
+// 3. Clic en "¡INGRESAR A LA FIESTA!"
+const handleEnterParty = () => {
   sounds.playDoorOpen()
   sounds.playTaskComplete()
   setTimeout(() => {
     sounds.playFanfare()
   }, 200)
 
-  // Celebratory confetti blast
+  // Gran ráfaga de confeti festivo
   confetti({
-    particleCount: 90,
+    particleCount: 100,
     spread: 80,
     origin: { y: 0.5 },
-    colors: ['#ef4444', '#06b6d4', '#ec4899', '#eab308', '#22c55e'],
+    colors: ['#ef4444', '#06b6d4', '#ec4899', '#eab308', '#22c55e', '#a855f7'],
   })
 
   isTransitioningOut.value = true
@@ -40,14 +66,14 @@ const handleJoinCrew = () => {
 
 <template>
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#030509]/95 overflow-hidden transition-all duration-500"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#030509]/95 overflow-hidden transition-all duration-500 select-none"
     :class="{ 'opacity-0 scale-105 pointer-events-none': isTransitioningOut }"
   >
-    <!-- Background Star Sprinkles -->
+    <!-- Background Space Ambient -->
     <div class="absolute inset-0 pointer-events-none -z-10 bg-[radial-gradient(ellipse_at_center,_#0f172a_0%,_#070a13_60%,_#030509_100%)]" />
 
     <!-- ============================================== -->
-    <!-- STEP 1: INITIAL PROMPT ("¿ESTÁS LISTO?")      -->
+    <!-- PASO 1: ¿ESTÁS LISTO PARA UNA NUEVA AVENTURA?  -->
     <!-- ============================================== -->
     <Transition
       enter-active-class="transition duration-400 ease-out"
@@ -63,15 +89,14 @@ const handleJoinCrew = () => {
         class="max-w-lg w-full bg-slate-900/95 border-4 border-cyan-500/50 rounded-3xl p-6 sm:p-8 text-center shadow-[0_0_50px_rgba(6,182,212,0.3)] relative overflow-hidden"
       >
         <!-- Top Radar Alert -->
-        <div class="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 rounded-full font-mono text-[11px] sm:text-xs font-bold uppercase tracking-widest mb-6 animate-pulse">
-          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-          SEÑAL ENTRANTE • SECTOR THE SKELD
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 rounded-full font-mono text-xs font-bold uppercase tracking-widest mb-4 animate-pulse">
+          <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+          TRANSMISIÓN ENTRANTE • SECTOR THE SKELD
         </div>
 
-        <!-- Glowing Central Helmet Visor Graphic -->
-        <div class="my-6 flex justify-center">
+        <!-- Glowing Helmet Visor -->
+        <div class="my-5 flex justify-center">
           <div class="relative w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-slate-950 border-4 border-cyan-400/80 flex items-center justify-center shadow-[0_0_30px_rgba(6,182,212,0.4)] animate-bounce-subtle">
-            <!-- Visor glass -->
             <div class="w-20 h-14 bg-gradient-to-br from-white via-cyan-300 to-sky-600 rounded-2xl border-2 border-black flex items-start justify-end p-1.5 shadow-inner">
               <div class="w-5 h-2.5 bg-white/80 rounded-full rotate-[-15deg]" />
             </div>
@@ -83,87 +108,162 @@ const handleJoinCrew = () => {
           ¿ESTÁS LISTO PARA UNA NUEVA AVENTURA?
         </h2>
 
-        <!-- Narrative Subtext -->
         <p class="text-xs sm:text-sm text-slate-300 font-mono mt-3 max-w-sm mx-auto leading-relaxed">
           Se ha detectado una señal de fiesta de máxima prioridad en la nave... Tu tripulación te necesita.
         </p>
 
-        <!-- Ready Button -->
-        <div class="mt-8">
+        <!-- Big Touch Button -->
+        <div class="mt-7">
           <button
             @click="handleReadyClick"
-            class="group w-full py-4 px-6 bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-sky-400 text-slate-950 font-black text-base sm:text-lg uppercase tracking-wider font-mono rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.6)] transition-all duration-200 hover:scale-[1.03] active:scale-95 cursor-pointer flex items-center justify-center gap-3"
+            class="group w-full py-4 px-6 bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-sky-400 text-slate-950 font-black text-lg sm:text-xl uppercase tracking-wider font-mono rounded-2xl shadow-[0_0_35px_rgba(6,182,212,0.6)] transition-all duration-200 hover:scale-[1.03] active:scale-95 cursor-pointer flex items-center justify-center gap-3"
           >
             <span>¡SÍ, ESTOY LISTO!</span>
             <span class="text-2xl group-hover:translate-x-1 transition-transform">🚀</span>
           </button>
         </div>
 
-        <!-- Audio notice -->
         <p class="text-[11px] text-cyan-400/70 font-mono mt-4">
-          🔊 Activa tu volumen para una mejor experiencia espacial
+          🔊 Sube el volumen para vivir la experiencia espacial
         </p>
       </div>
 
-      <!-- ============================================== -->
-      <!-- STEP 2: AMONG US ROLE REVEAL CINEMATIC         -->
-      <!-- ============================================== -->
+      <!-- ======================================================= -->
+      <!-- PASO 2: TRIPULANTE APRETANDO EL BOTÓN ROJO DE EMERGENCIA -->
+      <!-- ======================================================= -->
       <div
-        v-else-if="step === 'reveal'"
+        v-else-if="step === 'button_push'"
+        class="max-w-lg w-full bg-slate-900/95 border-4 border-red-600/60 rounded-3xl p-6 sm:p-8 text-center shadow-[0_0_60px_rgba(239,68,68,0.4)] relative overflow-hidden"
+        :class="{ 'animate-shake border-red-500 bg-red-950/90': isButtonPushed }"
+      >
+        <!-- Flashing Alert Header -->
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-red-600/30 text-red-300 border border-red-500/50 rounded-full font-mono text-xs font-black uppercase tracking-widest mb-3 animate-pulse">
+          <span class="text-base animate-spin">🚨</span>
+          ¡ALERTA ROJA EN LA NAVE!
+        </div>
+
+        <h3 class="text-xl sm:text-2xl font-black text-white tracking-wide">
+          ¡CONVOCA LA REUNIÓN DE EMERGENCIA!
+        </h3>
+
+        <!-- Interactive Scene: Among Us + Big Red Button Station -->
+        <div class="my-6 relative flex flex-col items-center justify-center">
+          <!-- The Crewmate running to button -->
+          <div
+            class="transition-all duration-300 transform mb-2"
+            :class="isButtonPushed ? 'translate-y-4 scale-110' : 'animate-bounce-subtle'"
+          >
+            <CrewmateAvatar
+              color="#ef4444"
+              shadow-color="#991b1b"
+              hat="party-hat"
+              :size="130"
+              animation="none"
+            />
+          </div>
+
+          <!-- The Table / Podium with Big 3D Red Button -->
+          <div class="relative w-full max-w-xs flex flex-col items-center">
+            <!-- Table top surface -->
+            <div class="w-64 h-8 bg-zinc-800 rounded-t-2xl border-4 border-zinc-950 shadow-inner" />
+
+            <!-- The Big Interactive Red Emergency Button -->
+            <button
+              @click="handlePressEmergencyButton"
+              :disabled="isButtonPushed"
+              class="relative -mt-6 group cursor-pointer focus:outline-none transition-transform duration-150 active:scale-95 disabled:pointer-events-none"
+            >
+              <!-- Outer glowing rim -->
+              <div
+                class="w-36 h-36 rounded-full bg-gradient-to-b from-yellow-400 to-amber-600 p-2 border-4 border-black shadow-[0_10px_25px_rgba(0,0,0,0.8)] flex items-center justify-center transition-all group-hover:scale-105"
+                :class="isButtonPushed ? 'scale-90 shadow-none' : 'shadow-[0_0_35px_rgba(239,68,68,0.7)] animate-pulse'"
+              >
+                <!-- Inner button core -->
+                <div
+                  class="w-full h-full rounded-full border-4 border-black flex flex-col items-center justify-center transition-all"
+                  :class="
+                    isButtonPushed
+                      ? 'bg-red-800 shadow-inner translate-y-1'
+                      : 'bg-gradient-to-b from-red-500 via-rose-600 to-red-800 shadow-[inset_0_4px_8px_rgba(255,255,255,0.6)] group-hover:from-red-400'
+                  "
+                >
+                  <span class="text-3xl" :class="{ 'animate-spin': isButtonPushed }">🚨</span>
+                  <span class="text-[11px] font-mono font-black text-white tracking-widest mt-0.5">
+                    {{ isButtonPushed ? '¡ACTIVADO!' : 'PRESIONA' }}
+                  </span>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Help Prompt for the Child -->
+        <div class="mt-4">
+          <p
+            class="text-sm font-mono font-bold tracking-wider"
+            :class="isButtonPushed ? 'text-yellow-400 animate-pulse text-base' : 'text-red-400 animate-bounce'"
+          >
+            {{ isButtonPushed ? '¡SIRENA SONANDO! ABRIENDO REUNIÓN...' : '👉 ¡TOCA EL BOTÓN ROJO CON TU DEDO! 👈' }}
+          </p>
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- PASO 3: EMERGENCY MEETING REVEAL (FIESTA DE SIONED)     -->
+      <!-- ======================================================= -->
+      <div
+        v-else-if="step === 'meeting_reveal'"
         class="max-w-xl w-full text-center py-6 px-4 animate-fade-in relative z-10"
       >
-        <!-- Dramatic Role Announcement Header -->
-        <div class="space-y-1 mb-4">
-          <p class="font-mono text-xs sm:text-sm uppercase tracking-widest text-cyan-400 font-bold animate-pulse">
-            MISIÓN ASIGNADA:
+        <!-- Flashing Emergency Banner -->
+        <div class="bg-red-600 text-white font-mono font-black py-2 px-4 rounded-xl text-xs sm:text-sm tracking-widest uppercase mb-4 shadow-[0_0_25px_rgba(239,68,68,0.8)] flex items-center justify-center gap-2 animate-pulse">
+          <span>🚨</span>
+          <span>EMERGENCY MEETING • REUNIÓN DE EMERGENCIA</span>
+          <span>🚨</span>
+        </div>
+
+        <!-- Title Slam -->
+        <div class="space-y-1 my-3">
+          <p class="font-mono text-xs uppercase tracking-widest text-cyan-400 font-bold">
+            ¡HAY UNA FIESTA ENTRE NOSOTROS!
           </p>
-          <h1 class="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-red-500 uppercase drop-shadow-[0_0_35px_rgba(239,68,68,0.8)] animate-slam">
+          <h1 class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white uppercase drop-shadow-[0_0_30px_rgba(239,68,68,0.8)] animate-slam">
             TRIPULANTE DE HONOR
           </h1>
         </div>
 
-        <!-- The Red Crewmate (Celebrant) Centerpiece -->
-        <div class="my-6 flex justify-center items-center">
+        <!-- Red Celebrant Avatar Floating with Glow -->
+        <div class="my-5 flex justify-center items-center">
           <div class="relative">
-            <!-- Pulsing ambient glow -->
             <div class="absolute inset-0 rounded-full bg-red-600/20 border border-red-500/40 transform scale-125 animate-ping opacity-60 pointer-events-none" />
-            
             <CrewmateAvatar
               :color="EVENT_CONFIG.celebrant.favoriteColor"
               shadow-color="#991b1b"
               :hat="EVENT_CONFIG.celebrant.hat"
-              :size="210"
+              :size="190"
               animation="float"
             />
           </div>
         </div>
 
-        <!-- Sioned Party Callout Banner -->
-        <div class="bg-slate-900/95 border-2 border-red-500/50 rounded-2xl p-4 sm:p-5 shadow-[0_0_30px_rgba(239,68,68,0.4)] max-w-md mx-auto mb-6">
-          <p class="text-xs font-mono font-bold text-red-400 uppercase tracking-widest mb-1">
-            ⭐ FIESTA OFICIAL ⭐
-          </p>
+        <!-- Sioned Party Badge -->
+        <div class="bg-slate-900/95 border-2 border-red-500/50 rounded-2xl p-4 shadow-[0_0_30px_rgba(239,68,68,0.4)] max-w-md mx-auto mb-5">
           <h2 class="text-2xl sm:text-3xl font-black text-white">
-            ¡{{ EVENT_CONFIG.celebrant.name }}'s Party!
+            ¡{{ EVENT_CONFIG.celebrant.name }}'s Birthday Party! 🎂
           </h2>
-          <p class="text-xs sm:text-sm text-slate-300 font-mono mt-1">
-            Sector The Skeld • ¡Celebramos en grande!
+          <p class="text-xs sm:text-sm text-cyan-300 font-mono mt-1">
+            Sector The Skeld • ¡Estás cordialmente invitado!
           </p>
         </div>
 
-        <!-- The Interactive Question -->
+        <!-- Big Enter Button -->
         <div class="space-y-3">
-          <p class="text-lg sm:text-2xl font-black text-white tracking-wide drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]">
-            ¿Te quieres unir a la tripulación?
-          </p>
-
-          <!-- Join Button -->
           <button
-            @click="handleJoinCrew"
-            class="group w-full max-w-md mx-auto py-4 px-6 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-400 hover:to-green-400 text-slate-950 font-black text-base sm:text-lg uppercase tracking-wider font-mono rounded-2xl shadow-[0_0_35px_rgba(34,197,94,0.6)] transition-all duration-200 hover:scale-[1.04] active:scale-95 cursor-pointer flex items-center justify-center gap-3 animate-pulse"
+            @click="handleEnterParty"
+            class="group w-full max-w-md mx-auto py-4 px-6 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-400 hover:to-green-400 text-slate-950 font-black text-lg sm:text-xl uppercase tracking-wider font-mono rounded-2xl shadow-[0_0_40px_rgba(34,197,94,0.7)] transition-all duration-200 hover:scale-[1.04] active:scale-95 cursor-pointer flex items-center justify-center gap-3 animate-pulse"
           >
-            <span>¡UNIRSE A LA TRIPULACIÓN!</span>
-            <span class="text-2xl group-hover:rotate-12 transition-transform">🎉</span>
+            <span>¡INGRESAR A LA NAVE!</span>
+            <span class="text-2xl group-hover:rotate-12 transition-transform">🚀</span>
           </button>
         </div>
       </div>
@@ -217,5 +317,21 @@ const handleJoinCrew = () => {
 
 .animate-fade-in {
   animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20%, 60% {
+    transform: translateX(-6px);
+  }
+  40%, 80% {
+    transform: translateX(6px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.3s ease-in-out 3;
 }
 </style>
