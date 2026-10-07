@@ -87,7 +87,8 @@ const showToast = (msg) => {
 const STORAGE_KEY = 'sioned_party_crew_v2'
 const crewMembers = ref([])
 
-onMounted(() => {
+onMounted(async () => {
+  // 1. Load from localStorage for instant display
   const saved = localStorage.getItem(STORAGE_KEY)
   if (saved) {
     try {
@@ -96,6 +97,32 @@ onMounted(() => {
       console.error(e)
     }
   }
+
+  // 2. Sync from Vercel /api/rsvp endpoint
+  try {
+    const res = await fetch('/api/rsvp')
+    if (res.ok) {
+      const data = await res.json()
+      if (data && data.guests && data.guests.length > 0) {
+        const existingNames = new Set(crewMembers.value.map((c) => c.name.toLowerCase()))
+        data.guests.forEach((g) => {
+          if (!existingNames.has(g.name.toLowerCase())) {
+            crewMembers.value.push({
+              id: g.id || 'guest_' + Date.now(),
+              name: g.name,
+              color: g.color || '#06b6d4',
+              shadowColor: g.shadowColor || '#0e7490',
+              hat: g.hat || 'party-hat',
+              dialog: g.message || '¡Listo para la fiesta en Chak Jumping Park! 🤸‍♂️',
+            })
+          }
+        })
+      }
+    }
+  } catch (e) {
+    // Local fallback
+  }
+
   if (!crewMembers.value || crewMembers.value.length === 0) {
     crewMembers.value = [
       {
@@ -104,7 +131,7 @@ onMounted(() => {
         color: '#3b82f6',
         shadowColor: '#1e40af',
         hat: 'sprout',
-        dialog: '¡Listo para jugar minijuegos! ⚡',
+        dialog: '¡Listo para brincar en los trampolines! ⚡',
       },
       {
         id: 'sofia',
@@ -136,7 +163,7 @@ const handleCrewConfirm = (data) => {
       shadowColor: data.shadowColor || guestCrewmate.value.shadowColor,
       hat: data.hat || guestCrewmate.value.hat,
       isUser: true,
-      dialog: `¡Hola a todos, soy ${data.name}! ¡Listo para la fiesta de Sioned! 🚀🎂`,
+      dialog: `¡Hola a todos, soy ${data.name}! ¡Listo para brincar en Chak Jumping Park! 🤸‍♂️🎂`,
     }
 
     // Replace if user previously registered or append
@@ -154,13 +181,13 @@ const handleCrewConfirm = (data) => {
       colors: ['#ef4444', '#06b6d4', '#ec4899', '#eab308', '#22c55e', '#a855f7'],
     })
 
-    showToast(`🎉 ¡Bienvenido a bordo, ${data.name}! Ya apareces en la reunión con Sioned.`)
+    showToast(`🎉 ¡Bienvenido a bordo, ${data.name}! Ya apareces en la nave con Sioned.`)
   }
 }
 </script>
 
 <template>
-  <div class="relative w-screen h-screen h-[100dvh] overflow-hidden bg-[#030509] text-slate-100 flex flex-col justify-between select-none">
+  <div class="relative w-screen h-screen h-[100dvh] overflow-hidden bg-transparent text-slate-100 flex flex-col justify-between select-none">
     <!-- Starfield Dynamic Canvas Background -->
     <StarfieldBackground />
 

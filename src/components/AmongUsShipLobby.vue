@@ -48,17 +48,25 @@ const localCrew = ref([])
 
 // Walkable floor limits on the Dropship image
 const BOUNDS = {
-  minX: 16,
-  maxX: 84,
+  minX: 18,
+  maxX: 82,
   minY: 42,
   maxY: 86,
+}
+
+// Interactive Ship Stations / Hotspots coordinates
+const STATIONS = {
+  location: { x: 50, y: 38, stationId: 'details', label: '📍 Chak Jumping Park' },
+  customizer: { x: 33, y: 52, stationId: 'customizer', label: '🎨 Tu Traje' },
+  emergency: { x: 71, y: 68, stationId: 'rsvp', label: '🚨 Confirmar' },
+  minigame: { x: 22, y: 46, stationId: 'minigame', label: '⚡ Minijuego' },
 }
 
 const syncCrew = () => {
   const celebrant = {
     id: 'sioned',
     name: 'Sioned',
-    x: 52,
+    x: 50,
     y: 56,
     color: EVENT_CONFIG.celebrant.favoriteColor,
     shadowColor: '#991b1b',
@@ -66,17 +74,17 @@ const syncCrew = () => {
     isCelebrant: true,
     facingLeft: false,
     isMoving: false,
-    dialog: '¡Bienvenidos a mi nave de cumpleaños! 🎂✨',
+    dialog: '¡Bienvenidos a mi fiesta en Chak Jumping Park! 🤸‍♂️🎂',
   }
 
   // Pre-configured starting slots for guests
   const defaultSlots = [
-    { x: 30, y: 72 },
-    { x: 70, y: 70 },
-    { x: 60, y: 80 },
-    { x: 40, y: 82 },
-    { x: 22, y: 60 },
-    { x: 78, y: 55 },
+    { x: 32, y: 72 },
+    { x: 62, y: 74 },
+    { x: 44, y: 80 },
+    { x: 24, y: 60 },
+    { x: 76, y: 55 },
+    { x: 58, y: 84 },
   ]
 
   const mapped = props.crewmates.map((m, idx) => {
@@ -101,18 +109,16 @@ const activeSpeaker = ref(null)
 let speakerTimer = null
 
 const funnyDialogs = [
-  '¡Ya quiero probar el pastel espacial! 🍰',
-  '¡No soy el impostor, lo juro! 🤫',
-  '¡Listo para festejar a Sioned! 🥳',
-  '¡Misión de diversión activada! ⚡',
-  '¡Traje mi mejor traje para la fiesta! 🎨',
-  '¡Vi a alguien meterse a la ventilación! 👀',
-  '¡La nave está lista para el despegue! 🚀',
+  '¡Ya quiero brincar en los trampolines de Chak! 🤸‍♂️',
+  '¡No soy el impostor, vengo por el pastel! 🍰',
+  '¡Listo para la fiesta de Sioned! 🥳',
+  '¡Misión espacial activada en Tepic! 🚀',
+  '¡Traje mi mejor traje para la misión! 🎨',
+  '¡Nos vemos el 25 de Octubre a las 3:00 PM! 🕒',
 ]
 
 // Drag & Drop Crewmate Movement
 const draggingId = ref(null)
-const dragOffset = ref({ x: 0, y: 0 })
 
 const handlePointerDown = (mate, e) => {
   e.preventDefault()
@@ -136,7 +142,7 @@ const handlePointerDown = (mate, e) => {
   if (speakerTimer) clearTimeout(speakerTimer)
   speakerTimer = setTimeout(() => {
     activeSpeaker.value = null
-  }, 2500)
+  }, 2600)
 
   window.addEventListener('pointermove', handlePointerMove)
   window.addEventListener('pointerup', handlePointerUp)
@@ -145,7 +151,7 @@ const handlePointerDown = (mate, e) => {
 const handlePointerMove = (e) => {
   if (!draggingId.value || !shipContainerRef.value) return
   const rect = shipContainerRef.value.getBoundingClientRect()
-  
+
   const rawX = ((e.clientX - rect.left) / rect.width) * 100
   const rawY = ((e.clientY - rect.top) / rect.height) * 100
 
@@ -172,13 +178,51 @@ const handlePointerUp = () => {
   window.removeEventListener('pointerup', handlePointerUp)
 }
 
-// Tap-To-Walk on Ship Floor
+// Walk character to target coordinates with walking animation
 let walkingTimer = null
+const walkActiveCrewmateTo = (targetX, targetY, onArrival) => {
+  const activeMate = localCrew.value.find((c) => c.isUser) || localCrew.value[0]
+  if (!activeMate) {
+    if (onArrival) onArrival()
+    return
+  }
+
+  sounds.playBeep(450, 0.05)
+  activeMate.facingLeft = targetX < activeMate.x
+  activeMate.isMoving = true
+
+  const startX = activeMate.x
+  const startY = activeMate.y
+  const duration = 550 // ms
+  const startTime = performance.now()
+
+  if (walkingTimer) cancelAnimationFrame(walkingTimer)
+
+  const step = (time) => {
+    const elapsed = time - startTime
+    const progress = Math.min(1, elapsed / duration)
+    const ease = 1 - Math.pow(1 - progress, 2)
+
+    activeMate.x = startX + (targetX - startX) * ease
+    activeMate.y = startY + (targetY - startY) * ease
+
+    if (progress < 1) {
+      walkingTimer = requestAnimationFrame(step)
+    } else {
+      activeMate.isMoving = false
+      walkingTimer = null
+      if (onArrival) onArrival()
+    }
+  }
+
+  walkingTimer = requestAnimationFrame(step)
+}
+
+// Tap-To-Walk on Ship Floor
 const handleFloorClick = (e) => {
-  // If clicked a button or already dragging, ignore
   if (draggingId.value || !shipContainerRef.value) return
   const target = e.target
-  if (target.closest('.crewmate-touch') || target.closest('button')) return
+  if (target.closest('.crewmate-touch') || target.closest('button') || target.closest('.station-hotspot')) return
 
   const rect = shipContainerRef.value.getBoundingClientRect()
   const clickX = ((e.clientX - rect.left) / rect.width) * 100
@@ -187,38 +231,21 @@ const handleFloorClick = (e) => {
   const targetX = Math.max(BOUNDS.minX, Math.min(BOUNDS.maxX, clickX))
   const targetY = Math.max(BOUNDS.minY, Math.min(BOUNDS.maxY, clickY))
 
-  // Move user's crewmate, or the first guest
-  const userMate = localCrew.value.find((c) => c.isUser) || localCrew.value.find((c) => !c.isCelebrant) || localCrew.value[0]
-  if (!userMate) return
+  walkActiveCrewmateTo(targetX, targetY)
+}
 
-  sounds.playBeep(450, 0.04)
-  userMate.facingLeft = targetX < userMate.x
-  userMate.isMoving = true
+// Walk to Station & Open
+const goToStation = (key) => {
+  const st = STATIONS[key]
+  if (!st) return
 
-  const startX = userMate.x
-  const startY = userMate.y
-  const duration = 600 // ms
-  const startTime = performance.now()
-
-  if (walkingTimer) cancelAnimationFrame(walkingTimer)
-
-  const step = (now) => {
-    const elapsed = now - startTime
-    const progress = Math.min(1, elapsed / duration)
-    const ease = 1 - Math.pow(1 - progress, 2) // ease-out
-
-    userMate.x = startX + (targetX - startX) * ease
-    userMate.y = startY + (targetY - startY) * ease
-
-    if (progress < 1) {
-      walkingTimer = requestAnimationFrame(step)
+  walkActiveCrewmateTo(st.x, st.y, () => {
+    if (key === 'emergency') {
+      emit('triggerEmergency')
     } else {
-      userMate.isMoving = false
-      walkingTimer = null
+      emit('openStation', st.stationId)
     }
-  }
-
-  walkingTimer = requestAnimationFrame(step)
+  })
 }
 
 // Keyboard arrow / WASD movement
@@ -253,64 +280,82 @@ const handleKeydown = (e) => {
     }, 150)
   }
 }
-
-// Emergency Meeting CTA
-const onEmergencyClick = () => {
-  emit('triggerEmergency')
-}
 </script>
 
 <template>
   <div class="relative w-full h-full flex flex-col justify-between items-center select-none overflow-hidden">
     <!-- ========================================================= -->
-    <!-- TOP BULKHEAD: MISSION HUD & EVENT COUNTDOWN               -->
+    <!-- TOP CENTERED: BIG COUNTDOWN HUD (MÁS GRANDE Y EN EL CENTRO)-->
     <!-- ========================================================= -->
-    <header class="relative z-20 w-full max-w-2xl px-2 sm:px-4 pt-1 sm:pt-2 flex flex-col items-center">
-      <div class="w-full bg-slate-950/90 border-2 border-cyan-500/60 rounded-2xl p-2 sm:p-2.5 shadow-[0_0_25px_rgba(6,182,212,0.4)] flex items-center justify-between gap-2">
-        <!-- Event Mission Title -->
-        <div class="min-w-0">
-          <div class="flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-            <span class="font-mono text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-cyan-300 truncate">
-              🎂 CUMPLEAÑOS DE {{ EVENT_CONFIG.celebrant.name.toUpperCase() }}
-            </span>
-          </div>
-          <p class="text-[10px] sm:text-xs font-black text-white font-mono truncate">
-            25 OCTUBRE • 3:00 PM • THE SKELD
-          </p>
+    <header class="relative z-20 w-full max-w-xl px-2 sm:px-4 pt-1 sm:pt-2 flex flex-col items-center">
+      <div class="w-full bg-slate-950/95 border-2 border-cyan-400/80 rounded-2xl p-2.5 sm:p-3 shadow-[0_0_35px_rgba(6,182,212,0.5)] flex flex-col items-center text-center">
+        <!-- Title & Location Badge -->
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+          <h2 class="font-mono text-xs sm:text-sm md:text-base font-black uppercase tracking-wider text-white">
+            🎂 CUMPLEAÑOS DE {{ EVENT_CONFIG.celebrant.name.toUpperCase() }} (8 AÑOS)
+          </h2>
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
         </div>
 
-        <!-- Live Countdown Mini HUD -->
-        <div class="flex items-center gap-1 font-mono text-center">
-          <div class="bg-slate-900 border border-cyan-500/40 rounded-lg px-1.5 py-1 min-w-[36px] sm:min-w-[42px]">
-            <div class="text-xs sm:text-sm font-black text-white leading-none">{{ String(days).padStart(2, '0') }}</div>
-            <div class="text-[7px] sm:text-[8px] font-bold text-cyan-400">DÍAS</div>
+        <p class="text-[10px] sm:text-xs font-mono font-bold text-cyan-300 mb-2">
+          📍 CHAK JUMPING PARK • DOMINGO 25 DE OCTUBRE • 3:00 PM
+        </p>
+
+        <!-- Big Centered Countdown Blocks -->
+        <div class="grid grid-cols-4 gap-1.5 sm:gap-2.5 w-full max-w-md">
+          <!-- Días -->
+          <div class="bg-slate-900/90 border border-cyan-400/50 rounded-xl py-1 sm:py-1.5 px-2 shadow-inner">
+            <div class="text-lg sm:text-2xl md:text-3xl font-black font-mono text-white leading-tight">
+              {{ String(days).padStart(2, '0') }}
+            </div>
+            <div class="text-[8px] sm:text-[10px] font-mono font-black text-cyan-400 uppercase tracking-widest">
+              DÍAS
+            </div>
           </div>
-          <div class="bg-slate-900 border border-cyan-500/40 rounded-lg px-1.5 py-1 min-w-[36px] sm:min-w-[42px]">
-            <div class="text-xs sm:text-sm font-black text-white leading-none">{{ String(hours).padStart(2, '0') }}</div>
-            <div class="text-[7px] sm:text-[8px] font-bold text-cyan-400">HOR</div>
+
+          <!-- Horas -->
+          <div class="bg-slate-900/90 border border-cyan-400/50 rounded-xl py-1 sm:py-1.5 px-2 shadow-inner">
+            <div class="text-lg sm:text-2xl md:text-3xl font-black font-mono text-white leading-tight">
+              {{ String(hours).padStart(2, '0') }}
+            </div>
+            <div class="text-[8px] sm:text-[10px] font-mono font-black text-cyan-400 uppercase tracking-widest">
+              HORAS
+            </div>
           </div>
-          <div class="bg-slate-900 border border-cyan-500/40 rounded-lg px-1.5 py-1 min-w-[36px] sm:min-w-[42px]">
-            <div class="text-xs sm:text-sm font-black text-white leading-none">{{ String(minutes).padStart(2, '0') }}</div>
-            <div class="text-[7px] sm:text-[8px] font-bold text-cyan-400">MIN</div>
+
+          <!-- Minutos -->
+          <div class="bg-slate-900/90 border border-cyan-400/50 rounded-xl py-1 sm:py-1.5 px-2 shadow-inner">
+            <div class="text-lg sm:text-2xl md:text-3xl font-black font-mono text-white leading-tight">
+              {{ String(minutes).padStart(2, '0') }}
+            </div>
+            <div class="text-[8px] sm:text-[10px] font-mono font-black text-cyan-400 uppercase tracking-widest">
+              MIN
+            </div>
           </div>
-          <div class="bg-slate-900 border border-pink-500/50 rounded-lg px-1.5 py-1 min-w-[36px] sm:min-w-[42px]">
-            <div class="text-xs sm:text-sm font-black text-pink-400 leading-none animate-pulse">{{ String(seconds).padStart(2, '0') }}</div>
-            <div class="text-[7px] sm:text-[8px] font-bold text-pink-400">SEG</div>
+
+          <!-- Segundos -->
+          <div class="bg-slate-900/90 border border-pink-500/60 rounded-xl py-1 sm:py-1.5 px-2 shadow-inner">
+            <div class="text-lg sm:text-2xl md:text-3xl font-black font-mono text-pink-400 leading-tight animate-pulse">
+              {{ String(seconds).padStart(2, '0') }}
+            </div>
+            <div class="text-[8px] sm:text-[10px] font-mono font-black text-pink-400 uppercase tracking-widest">
+              SEG
+            </div>
           </div>
         </div>
       </div>
     </header>
 
     <!-- ========================================================= -->
-    <!-- DROPSHIP INTERIOR LOBBY (THE OFFICIAL AMONG US SHIP)      -->
+    <!-- DROPSHIP INTERIOR LOBBY (EL MAPA INTERACTIVO COMO MINIJUEGO)-->
     <!-- ========================================================= -->
     <main class="relative flex-1 w-full flex items-center justify-center p-2 min-h-0">
-      <!-- The Dropship Pod Container (Floating in Deep Space) -->
+      <!-- The Dropship Pod Container (Floating in Deep Space with Visible Stars Around) -->
       <div
         ref="shipContainerRef"
         @click="handleFloorClick"
-        class="relative w-full max-w-[620px] aspect-[768/712] max-h-[66vh] sm:max-h-[70vh] rounded-3xl border-4 border-slate-700/80 shadow-[0_0_50px_rgba(0,0,0,0.95)] overflow-hidden cursor-crosshair group select-none"
+        class="relative w-full max-w-[620px] aspect-[768/712] max-h-[60vh] sm:max-h-[65vh] rounded-3xl border-4 border-slate-700/80 shadow-[0_0_60px_rgba(0,0,0,0.95)] overflow-hidden cursor-crosshair group select-none"
       >
         <!-- The Authentic Dropship Lobby Image -->
         <img
@@ -319,35 +364,70 @@ const onEmergencyClick = () => {
           class="absolute inset-0 w-full h-full object-fill pointer-events-none"
         />
 
-        <!-- INTERACTIVE LAPTOP ON CRATE (Customizer Shortcut) -->
-        <!-- Located at x: ~34%, y: ~48% on the crate -->
+        <!-- ======================================================= -->
+        <!-- INTERACTIVE SHIP STATIONS (TAREAS / MINIJUEGO)          -->
+        <!-- ======================================================= -->
+
+        <!-- 1. PUERTA PRINCIPAL DE DESPEGUE -> CHAK JUMPING PARK (UBICACIÓN) -->
         <div
-          @click.stop="emit('openStation', 'customizer')"
-          class="absolute left-[30%] top-[45%] w-16 h-16 flex flex-col items-center justify-center cursor-pointer group/laptop z-20"
-          title="Toca la laptop para personalizar tu traje"
+          @click.stop="goToStation('location')"
+          class="station-hotspot absolute left-[43%] top-[23%] w-24 h-18 flex flex-col items-center justify-center cursor-pointer group/door z-20"
+          title="Toca para ver el lugar del evento: Chak Jumping Park"
         >
-          <!-- Pulsing Highlight Ring around Laptop -->
-          <div class="w-10 h-10 rounded-xl bg-cyan-400/20 border-2 border-cyan-400/80 animate-pulse flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.8)] group-hover/laptop:scale-110 transition-transform">
-            <span class="text-xs">💻</span>
+          <div class="w-10 h-10 rounded-full bg-cyan-500/30 border-2 border-cyan-400 animate-pulse flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.8)] group-hover/door:scale-110 transition-transform">
+            <span class="text-base">📍</span>
           </div>
-          <span class="mt-0.5 bg-black/90 text-[8px] font-mono font-black text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-400/60 shadow pointer-events-none whitespace-nowrap">
-            Personalizar
+          <span class="mt-0.5 bg-black/90 text-[8px] font-mono font-black text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-400 shadow pointer-events-none whitespace-nowrap">
+            Chak Jumping Park
           </span>
         </div>
 
-        <!-- EMERGENCY BUTTON SHORTCUT ON THE FLOOR -->
+        <!-- 2. LAPTOP SOBRE LA CAJA IZQUIERDA -> PERSONALIZAR TU TRAJE -->
         <div
-          @click.stop="onEmergencyClick"
-          class="absolute left-[70%] top-[72%] w-16 h-16 flex flex-col items-center justify-center cursor-pointer group/emerg z-20"
-          title="¡Toca para convocar reunión de emergencia!"
+          @click.stop="goToStation('customizer')"
+          class="station-hotspot absolute left-[29%] top-[45%] w-18 h-18 flex flex-col items-center justify-center cursor-pointer group/laptop z-20"
+          title="Toca la laptop sobre la caja para personalizar tu traje"
         >
-          <button
-            class="w-11 h-11 bg-gradient-to-b from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 rounded-full border-2 border-red-950 shadow-[0_4px_0_#7f1d1d,0_0_15px_rgba(239,68,68,0.7)] flex items-center justify-center text-lg active:translate-y-0.5 transition-all cursor-pointer"
-          >
-            🚨
-          </button>
-          <span class="mt-0.5 bg-red-600 text-white font-mono font-black text-[8px] uppercase px-1.5 py-0.2 rounded border border-red-400 shadow pointer-events-none whitespace-nowrap">
-            Reunión
+          <div class="w-9 h-9 rounded-xl bg-purple-500/30 border-2 border-purple-400 animate-pulse flex items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.8)] group-hover/laptop:scale-110 transition-transform">
+            <span class="text-sm">💻</span>
+          </div>
+          <span class="mt-0.5 bg-black/90 text-[8px] font-mono font-black text-purple-300 px-1.5 py-0.5 rounded border border-purple-400/80 shadow pointer-events-none whitespace-nowrap">
+            Tu Traje
+          </span>
+        </div>
+
+        <!-- 3. BOTÓN ROJO DE EMERGENCIA SOBRE LA CAJA DERECHA -> CONFIRMAR ASISTENCIA -->
+        <div
+          @click.stop="goToStation('emergency')"
+          class="station-hotspot absolute left-[67%] top-[57%] w-20 h-20 flex flex-col items-center justify-center cursor-pointer group/emerg z-20"
+          title="¡Botón de Emergencia sobre la caja! Toca para confirmar tu asistencia"
+        >
+          <!-- Red 3D Button sitting directly on the crate -->
+          <div class="relative -mt-2 group-hover/emerg:scale-110 transition-transform">
+            <!-- Pulsing emergency alert ring -->
+            <div class="absolute -inset-1.5 rounded-full bg-red-600/40 animate-ping" />
+            <button
+              class="relative w-11 h-11 bg-gradient-to-b from-red-500 to-red-700 active:translate-y-0.5 rounded-full border-2 border-red-950 shadow-[0_4px_0_#7f1d1d,0_0_20px_rgba(239,68,68,0.9)] flex items-center justify-center text-xl cursor-pointer"
+            >
+              🚨
+            </button>
+          </div>
+          <span class="mt-1 bg-red-600 text-white font-mono font-black text-[8px] uppercase px-2 py-0.5 rounded-full border border-red-300 shadow-[0_0_10px_rgba(239,68,68,0.8)] pointer-events-none whitespace-nowrap animate-bounce-subtle">
+            ¡Confirmar!
+          </span>
+        </div>
+
+        <!-- 4. PANEL DE CABLES EN ASIENTOS IZQUIERDOS -> MINIJUEGO -->
+        <div
+          @click.stop="goToStation('minigame')"
+          class="station-hotspot absolute left-[15%] top-[34%] w-18 h-18 flex flex-col items-center justify-center cursor-pointer group/task z-20"
+          title="Toca para jugar el minijuego de cables"
+        >
+          <div class="w-8 h-8 rounded-lg bg-yellow-500/30 border-2 border-yellow-400 animate-pulse flex items-center justify-center shadow-[0_0_12px_rgba(234,179,8,0.8)] group-hover/task:scale-110 transition-transform">
+            <span class="text-xs">⚡</span>
+          </div>
+          <span class="mt-0.5 bg-black/90 text-[7px] font-mono font-black text-yellow-300 px-1.5 py-0.5 rounded border border-yellow-400/80 shadow pointer-events-none whitespace-nowrap">
+            Minijuego
           </span>
         </div>
 
@@ -362,10 +442,10 @@ const onEmergencyClick = () => {
         >
           <div
             v-if="activeSpeaker"
-            class="absolute z-40 max-w-[200px] px-2.5 py-1.5 bg-slate-950/95 border-2 border-cyan-400 rounded-xl text-center shadow-[0_0_20px_rgba(6,182,212,0.6)] pointer-events-none"
+            class="absolute z-40 max-w-[210px] px-2.5 py-1.5 bg-slate-950/95 border-2 border-cyan-400 rounded-xl text-center shadow-[0_0_20px_rgba(6,182,212,0.6)] pointer-events-none"
             :style="{
               left: `${localCrew.find((c) => c.id === activeSpeaker.id)?.x || 50}%`,
-              top: `${(localCrew.find((c) => c.id === activeSpeaker.id)?.y || 60) - 15}%`,
+              top: `${(localCrew.find((c) => c.id === activeSpeaker.id)?.y || 60) - 16}%`,
               transform: 'translateX(-50%)',
             }"
           >
@@ -429,7 +509,7 @@ const onEmergencyClick = () => {
         <div class="absolute bottom-2 left-2 z-20 pointer-events-none">
           <span class="bg-black/80 text-[8px] sm:text-[9px] font-mono font-bold text-slate-300 px-2 py-0.5 rounded-full border border-slate-700 flex items-center gap-1 shadow">
             <span>🎮</span>
-            <span>¡Arrastra o toca el piso para moverte!</span>
+            <span>¡Arrastra tu muñeco o toca las estaciones!</span>
           </span>
         </div>
       </div>
@@ -441,7 +521,7 @@ const onEmergencyClick = () => {
         👥 Tripulantes a bordo: <strong class="text-white">{{ localCrew.length }}</strong>
       </span>
       <button
-        @click="emit('openStation', 'rsvp')"
+        @click="goToStation('emergency')"
         class="px-2.5 py-0.5 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 hover:text-white border border-emerald-500/50 rounded-full font-bold transition-all cursor-pointer shadow flex items-center gap-1"
       >
         <span>➕ Unirme</span>

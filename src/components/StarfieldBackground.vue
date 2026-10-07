@@ -249,12 +249,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <!-- Ambient static background gradient handled natively by CSS (zero GPU penalty) -->
+  <!-- Ambient static background gradient -->
   <div
-    class="fixed inset-0 pointer-events-none -z-10 bg-[radial-gradient(ellipse_at_50%_40%,_#0f172a_0%,_#070a13_55%,_#030509_100%)]"
+    class="fixed inset-0 pointer-events-none z-0 bg-[radial-gradient(ellipse_at_50%_40%,_#0f172a_0%,_#070a13_55%,_#030509_100%)]"
   />
   <canvas
     ref="canvasRef"
-    class="fixed inset-0 pointer-events-none -z-10 w-full h-full"
+    class="fixed inset-0 pointer-events-none z-0 w-full h-full"
   />
 </template>

@@ -21,12 +21,12 @@ export const EVENT_CONFIG = {
     displayTime: '3:00 PM',
   },
   location: {
-    name: 'Base Estelar "Salón de Eventos Los Olivos"',
-    subname: 'Sector The Skeld - Salón Principal',
-    address: 'Av. Paseo de las Flores #340, Fracc. Las Brisas, Tepic, Nayarit',
-    mapsUrl: 'https://maps.google.com/?q=Salon+de+Eventos+Los+Olivos',
-    wazeUrl: 'https://waze.com/ul?q=Salon+de+Eventos+Los+Olivos',
-    coordinates: '21.5039° N, 104.8946° W',
+    name: 'Chak Jumping Park',
+    subname: 'Parque de Trampolines y Brincos Espaciales 🤸‍♂️🚀',
+    address: 'Miguel Lebrija 43, Col. Aviación, Tepic, Nayarit, C.P. 63190',
+    mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Chak+Jumping+Park+Miguel+Lebrija+43+Aviacion+Tepic',
+    wazeUrl: 'https://waze.com/ul?q=Chak+Jumping+Park+Tepic',
+    coordinates: '21.5089° N, 104.8946° W',
   },
   dressCode: {
     title: 'Código de Tripulante',

@@ -41,15 +41,41 @@ const formattedWhatsAppUrl = computed(() => {
 })
 
 const emit = defineEmits(['confirm', 'viewShip'])
+const isSaving = ref(false)
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!guestName.value.trim()) {
     sounds.playCardError()
     alert('Por favor ingresa tu nombre de tripulante')
     return
   }
 
+  isSaving.value = true
   sounds.playTaskComplete()
+
+  const payload = {
+    name: guestName.value.trim(),
+    color: props.crewmate.color,
+    shadowColor: props.crewmate.shadowColor,
+    hat: props.crewmate.hat,
+    colorName: props.crewmate.colorName,
+    companions: companions.value,
+    attendance: attendance.value,
+    message: message.value.trim(),
+  }
+
+  // Save to /api/rsvp in background (Vercel serverless endpoint)
+  try {
+    await fetch('/api/rsvp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  } catch (err) {
+    console.warn('Sync /api/rsvp error (fallback a localStorage):', err)
+  }
+
+  isSaving.value = false
   isSubmitted.value = true
 
   if (attendance.value === 'yes') {
@@ -59,18 +85,8 @@ const handleSubmit = () => {
       origin: { y: 0.6 },
     })
 
-    emit('confirm', {
-      name: guestName.value.trim(),
-      color: props.crewmate.color,
-      shadowColor: props.crewmate.shadowColor,
-      hat: props.crewmate.hat,
-      colorName: props.crewmate.colorName,
-      companions: companions.value,
-    })
+    emit('confirm', payload)
   }
-
-  // Open WhatsApp in new tab
-  window.open(formattedWhatsAppUrl.value, '_blank')
 }
 </script>
 
@@ -237,14 +253,26 @@ const handleSubmit = () => {
         </div>
 
         <!-- Submit Button -->
-        <div class="pt-2">
+        <div class="pt-2 space-y-2">
           <button
             type="submit"
-            class="w-full py-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-slate-950 font-black text-sm uppercase tracking-wider rounded-2xl shadow-[0_0_25px_rgba(16,185,129,0.4)] transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+            :disabled="isSaving"
+            class="w-full py-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-slate-950 font-black text-sm uppercase tracking-wider rounded-2xl shadow-[0_0_25px_rgba(16,185,129,0.4)] transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
           >
-            <span>💬 Confirmar por WhatsApp</span>
-            <span class="text-base">🚀</span>
+            <span v-if="isSaving">Guardando en la nave... 🛸</span>
+            <span v-else>🚀 ¡CONFIRMAR ASISTENCIA Y SUBIR A LA NAVE!</span>
           </button>
+
+          <!-- Optional WhatsApp Share -->
+          <div class="text-center pt-1">
+            <a
+              :href="formattedWhatsAppUrl"
+              target="_blank"
+              class="text-[11px] font-mono text-emerald-400 hover:text-emerald-200 underline inline-flex items-center gap-1 cursor-pointer"
+            >
+              <span>💬 Enviar también copia por WhatsApp (Opcional)</span>
+            </a>
+          </div>
         </div>
       </form>
     </div>
