@@ -404,6 +404,65 @@ class SoundEngine {
     })
   }
 
+  // Iconic Among Us space ejection sound
+  playEjected() {
+    if (this.muted) return
+    this.init()
+    if (!this.ctx) return
+
+    const now = this.ctx.currentTime
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(340, now)
+    osc.frequency.exponentialRampToValueAtTime(55, now + 1.4)
+    gain.gain.setValueAtTime(0.25, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5)
+    osc.connect(gain)
+    gain.connect(this.ctx.destination)
+    osc.start(now)
+    osc.stop(now + 1.5)
+  }
+
+  // Laser pop / Asteroid explosion sound
+  playLaserPop() {
+    if (this.muted) return
+    this.init()
+    if (!this.ctx) return
+
+    const now = this.ctx.currentTime
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(800, now)
+    osc.frequency.exponentialRampToValueAtTime(120, now + 0.15)
+    gain.gain.setValueAtTime(0.28, now)
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18)
+    osc.connect(gain)
+    gain.connect(this.ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.18)
+  }
+
+  // Download data tick
+  playDownloadTick() {
+    if (this.muted) return
+    this.init()
+    if (!this.ctx) return
+
+    const now = this.ctx.currentTime
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(880, now)
+    gain.gain.setValueAtTime(0.06, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04)
+    osc.connect(gain)
+    gain.connect(this.ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.04)
+  }
+
   toggleBgm() {
     if (this.isBgmPlaying) {
       this.stopBgm()

@@ -168,6 +168,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             <AmongUsMinigame
               @to-customizer="switchStation('customizer')"
               @to-rsvp="switchStation('rsvp')"
+              @view-ship="handleClose"
             />
           </div>
 
@@ -191,9 +192,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         </div>
 
         <!-- ======================================================== -->
-        <!-- TABLET BOTTOM NAVIGATION BAR                             -->
+        <!-- TABLET BOTTOM NAVIGATION BAR (HIDDEN IN MINIGAMES)       -->
         <!-- ======================================================== -->
-        <div class="relative z-10 bg-slate-950/90 border-t-2 border-slate-800 p-2 sm:p-2.5 flex items-center justify-between gap-2">
+        <div
+          v-if="stationId !== 'minigame'"
+          class="relative z-10 bg-slate-950/90 border-t-2 border-slate-800 p-2 sm:p-2.5 flex items-center justify-between gap-2"
+        >
           <!-- Back Step Button -->
           <button
             v-if="stationId !== 'details'"
