@@ -67,15 +67,27 @@ const emitChange = () => {
   <div class="w-full max-w-2xl mx-auto py-2 px-1 sm:px-3 select-none">
     <div class="bg-slate-950/65 border-2 border-purple-500/50 rounded-3xl p-4 sm:p-6 shadow-[0_0_30px_rgba(168,85,247,0.3)]">
       <!-- Section Title -->
-      <div class="text-center mb-5">
+      <div class="text-center mb-4">
         <span class="px-3.5 py-1 bg-purple-500/20 text-purple-300 font-mono text-xs font-black uppercase rounded-full border border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.4)]">
           ARMARIO DE TRIPULACIÓN
         </span>
-        <h3 class="text-2xl sm:text-3xl font-black text-white mt-2">
+        <h3 class="text-2xl sm:text-3xl font-black text-white mt-1.5">
           Elige tu Traje para la Misión
         </h3>
         <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-lg mx-auto font-mono">
           Tu tripulante aparecerá en la nave con Sioned y en tu credencial VIP.
+        </p>
+      </div>
+
+      <!-- Trampoline Outfit Recommendation Banner -->
+      <div class="mb-5 bg-gradient-to-r from-yellow-500/20 via-amber-500/25 to-yellow-500/20 border-2 border-yellow-400/70 rounded-2xl p-3 text-center shadow-[0_0_20px_rgba(234,179,8,0.3)]">
+        <p class="font-mono text-xs sm:text-sm font-black text-yellow-300 flex items-center justify-center gap-1.5">
+          <span>🧦</span>
+          <span>¡RECOMENDACIÓN DE TRAJE PARA LA FIESTA!</span>
+          <span>🤸‍♂️</span>
+        </p>
+        <p class="text-[11px] sm:text-xs text-slate-100 font-mono mt-1 leading-relaxed">
+          Por el tipo de salón (trampolines), te recomendamos venir con <strong>ropa cómoda</strong> y <strong>calcetas para brincar</strong> en <strong>Chak Jumping Park</strong>.
         </p>
       </div>
 

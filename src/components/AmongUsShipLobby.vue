@@ -56,10 +56,10 @@ const BOUNDS = {
 
 // Interactive Ship Stations / Hotspots coordinates
 const STATIONS = {
-  location: { x: 50, y: 38, stationId: 'details', label: '📍 Chak Jumping Park' },
-  customizer: { x: 33, y: 52, stationId: 'customizer', label: '🎨 Tu Traje' },
-  emergency: { x: 71, y: 68, stationId: 'rsvp', label: '🚨 Confirmar' },
-  minigame: { x: 22, y: 46, stationId: 'minigame', label: '⚡ Minijuego' },
+  location: { x: 50, y: 34, stationId: 'details', label: '🗺️ Elegir Escenario' },
+  customizer: { x: 33, y: 60, stationId: 'customizer', label: '🎨 Tu Traje' },
+  emergency: { x: 68, y: 60, stationId: 'rsvp', label: '🚨 Confirmar' },
+  minigame: { x: 76, y: 36, stationId: 'minigame', label: '⚡ Minijuegos' },
 }
 
 const syncCrew = () => {
@@ -67,7 +67,7 @@ const syncCrew = () => {
     id: 'sioned',
     name: 'Sioned',
     x: 50,
-    y: 56,
+    y: 54,
     color: EVENT_CONFIG.celebrant.favoriteColor,
     shadowColor: '#991b1b',
     hat: EVENT_CONFIG.celebrant.hat,
@@ -77,14 +77,14 @@ const syncCrew = () => {
     dialog: '¡Bienvenidos a mi fiesta en Chak Jumping Park! 🤸‍♂️🎂',
   }
 
-  // Pre-configured starting slots for guests
+  // Pre-configured starting slots for guests (open central room floor)
   const defaultSlots = [
-    { x: 32, y: 72 },
-    { x: 62, y: 74 },
-    { x: 44, y: 80 },
-    { x: 24, y: 60 },
-    { x: 76, y: 55 },
-    { x: 58, y: 84 },
+    { x: 44, y: 72 },
+    { x: 56, y: 72 },
+    { x: 50, y: 82 },
+    { x: 38, y: 78 },
+    { x: 62, y: 78 },
+    { x: 50, y: 64 },
   ]
 
   const mapped = props.crewmates.map((m, idx) => {
@@ -373,31 +373,39 @@ const handleKeydown = (e) => {
         <!-- INTERACTIVE SHIP STATIONS (TAREAS / MINIJUEGO)          -->
         <!-- ======================================================= -->
 
-        <!-- 1. PUERTA PRINCIPAL DE DESPEGUE -> CHAK JUMPING PARK (UBICACIÓN) -->
+        <!-- 1. PUERTA PRINCIPAL DE DESPEGUE -> ELEGIR ESCENARIO (CHAK JUMPING PARK) -->
         <div
           @click.stop="goToStation('location')"
-          class="station-hotspot absolute left-[43%] top-[23%] w-24 h-18 flex flex-col items-center justify-center cursor-pointer group/door z-20"
-          title="Toca para ver el lugar del evento: Chak Jumping Park"
+          class="station-hotspot absolute left-[35%] top-[18%] w-36 h-20 flex flex-col items-center justify-center cursor-pointer group/door z-20"
+          title="Toca para elegir escenario y ver los datos de la fiesta en Chak Jumping Park"
         >
-          <div class="w-10 h-10 rounded-full bg-cyan-500/30 border-2 border-cyan-400 animate-pulse flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.8)] group-hover/door:scale-110 transition-transform">
-            <span class="text-base">📍</span>
+          <!-- Holographic Scenario Selector Console -->
+          <div class="px-2.5 py-1 bg-cyan-950/90 border-2 border-cyan-400 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.85)] flex items-center gap-1.5 group-hover/door:scale-105 transition-transform animate-pulse">
+            <span class="text-sm">🗺️</span>
+            <span class="font-mono font-black text-[9px] uppercase tracking-wider text-cyan-200">
+              Elegir Escenario
+            </span>
           </div>
-          <span class="mt-0.5 bg-black/90 text-[8px] font-mono font-black text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-400 shadow pointer-events-none whitespace-nowrap">
-            Chak Jumping Park
+          <span class="mt-1 bg-black/95 text-[8px] font-mono font-black text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)] pointer-events-none whitespace-nowrap">
+            📍 Chak Jumping Park 🤸‍♂️
           </span>
         </div>
 
-        <!-- 2. LAPTOP SOBRE LA CAJA IZQUIERDA -> PERSONALIZAR TU TRAJE -->
+        <!-- 2. LAPTOP SOBRE LA CAJA IZQUIERDA -> TU TRAJE + RECOMENDACIÓN CALCETAS Y ROPA CÓMODA -->
         <div
           @click.stop="goToStation('customizer')"
-          class="station-hotspot absolute left-[29%] top-[45%] w-18 h-18 flex flex-col items-center justify-center cursor-pointer group/laptop z-20"
-          title="Toca la laptop sobre la caja para personalizar tu traje"
+          class="station-hotspot absolute left-[26%] top-[52%] w-26 h-24 flex flex-col items-center justify-center cursor-pointer group/laptop z-20"
+          title="Toca la laptop para personalizar tu traje. ¡Recomendación: Ropa cómoda y calcetas para brincar!"
         >
-          <div class="w-9 h-9 rounded-xl bg-purple-500/30 border-2 border-purple-400 animate-pulse flex items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.8)] group-hover/laptop:scale-110 transition-transform">
-            <span class="text-sm">💻</span>
+          <!-- 3D Sci-Fi Laptop sitting directly on top of the left crate -->
+          <div class="w-10 h-10 rounded-xl bg-purple-600/40 border-2 border-purple-400 animate-pulse flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.9)] group-hover/laptop:scale-110 transition-transform">
+            <span class="text-base">💻</span>
           </div>
-          <span class="mt-0.5 bg-black/90 text-[8px] font-mono font-black text-purple-300 px-1.5 py-0.5 rounded border border-purple-400/80 shadow pointer-events-none whitespace-nowrap">
-            Tu Traje
+          <span class="mt-0.5 bg-black/95 text-[8px] font-mono font-black text-purple-200 px-2 py-0.5 rounded-full border border-purple-400/90 shadow pointer-events-none whitespace-nowrap">
+            🎨 Tu Traje
+          </span>
+          <span class="mt-0.5 bg-yellow-400 text-black text-[7px] font-mono font-black px-1.5 py-0.5 rounded-full border border-black shadow-[0_0_10px_rgba(250,204,21,0.6)] pointer-events-none whitespace-nowrap animate-bounce-subtle">
+            🧦 Ropa Cómoda y Calcetas
           </span>
         </div>
 
@@ -407,7 +415,7 @@ const handleKeydown = (e) => {
           class="station-hotspot absolute left-[67%] top-[57%] w-20 h-20 flex flex-col items-center justify-center cursor-pointer group/emerg z-20"
           title="¡Botón de Emergencia sobre la caja! Toca para confirmar tu asistencia"
         >
-          <!-- Red 3D Button sitting directly on the crate -->
+          <!-- Red 3D Button sitting directly on the right crate -->
           <div class="relative -mt-2 group-hover/emerg:scale-110 transition-transform">
             <!-- Pulsing emergency alert ring -->
             <div class="absolute -inset-1.5 rounded-full bg-red-600/40 animate-ping" />
@@ -422,17 +430,20 @@ const handleKeydown = (e) => {
           </span>
         </div>
 
-        <!-- 4. PANEL DE CABLES EN ASIENTOS IZQUIERDOS -> MINIJUEGO -->
+        <!-- 4. REUBICADO: PANEL DE MINIJUEGOS EN CONSOLA DERECHA SUPERIOR -->
         <div
           @click.stop="goToStation('minigame')"
-          class="station-hotspot absolute left-[15%] top-[34%] w-18 h-18 flex flex-col items-center justify-center cursor-pointer group/task z-20"
-          title="Toca para jugar el minijuego de cables"
+          class="station-hotspot absolute left-[74%] top-[30%] w-22 h-20 flex flex-col items-center justify-center cursor-pointer group/task z-20"
+          title="Toca para jugar los minijuegos de cables y tarjeta VIP"
         >
-          <div class="w-8 h-8 rounded-lg bg-yellow-500/30 border-2 border-yellow-400 animate-pulse flex items-center justify-center shadow-[0_0_12px_rgba(234,179,8,0.8)] group-hover/task:scale-110 transition-transform">
-            <span class="text-xs">⚡</span>
+          <div class="w-9 h-9 rounded-xl bg-yellow-500/30 border-2 border-yellow-400 animate-pulse flex items-center justify-center shadow-[0_0_18px_rgba(234,179,8,0.85)] group-hover/task:scale-110 transition-transform">
+            <span class="text-sm">⚡</span>
           </div>
-          <span class="mt-0.5 bg-black/90 text-[7px] font-mono font-black text-yellow-300 px-1.5 py-0.5 rounded border border-yellow-400/80 shadow pointer-events-none whitespace-nowrap">
-            Minijuego
+          <span class="mt-0.5 bg-black/95 text-[8px] font-mono font-black text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-400/90 shadow pointer-events-none whitespace-nowrap">
+            ⚡ Minijuegos
+          </span>
+          <span class="text-[7px] text-cyan-300 font-mono font-bold pointer-events-none whitespace-nowrap">
+            Cables y Tarjeta
           </span>
         </div>
 

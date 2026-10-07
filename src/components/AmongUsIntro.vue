@@ -5,6 +5,7 @@ import emergencyImg from '../assets/emergency-meeting.png'
 import { EVENT_CONFIG } from '../config/event'
 import { sounds } from '../utils/audio'
 import CrewmateAvatar from './CrewmateAvatar.vue'
+import StarfieldBackground from './StarfieldBackground.vue'
 
 const emit = defineEmits(['complete'])
 
@@ -68,11 +69,11 @@ const handleEnterParty = () => {
 
 <template>
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#030509]/95 overflow-hidden transition-all duration-500 select-none"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-transparent overflow-hidden transition-all duration-500 select-none"
     :class="{ 'opacity-0 scale-105 pointer-events-none': isTransitioningOut }"
   >
-    <!-- Background Space Ambient -->
-    <div class="absolute inset-0 pointer-events-none -z-10 bg-[radial-gradient(ellipse_at_center,_#0f172a_0%,_#070a13_60%,_#030509_100%)]" />
+    <!-- Background Space with Stars & 12 Floating Among Us Astronauts! -->
+    <StarfieldBackground />
 
     <!-- ============================================== -->
     <!-- PASO 1: ¿ESTÁS LISTO PARA UNA NUEVA AVENTURA?  -->
@@ -88,7 +89,7 @@ const handleEnterParty = () => {
     >
       <div
         v-if="step === 'prompt'"
-        class="max-w-lg w-full bg-slate-900/95 border-4 border-cyan-500/50 rounded-3xl p-6 sm:p-8 text-center shadow-[0_0_50px_rgba(6,182,212,0.3)] relative overflow-hidden"
+        class="max-w-lg w-full bg-slate-950/80 border-2 border-cyan-400/80 rounded-3xl p-6 sm:p-8 text-center shadow-[0_0_50px_rgba(6,182,212,0.4)] relative overflow-hidden z-10"
       >
         <!-- Top Radar Alert -->
         <div class="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 rounded-full font-mono text-xs font-bold uppercase tracking-widest mb-4 animate-pulse">
@@ -135,8 +136,8 @@ const handleEnterParty = () => {
       <!-- ======================================================= -->
       <div
         v-else-if="step === 'button_push'"
-        class="max-w-lg w-full bg-slate-900/95 border-4 border-red-600/60 rounded-3xl p-6 sm:p-8 text-center shadow-[0_0_60px_rgba(239,68,68,0.4)] relative overflow-hidden"
-        :class="{ 'animate-shake border-red-500 bg-red-950/90': isButtonPushed }"
+        class="max-w-lg w-full bg-slate-950/85 border-2 border-red-500/80 rounded-3xl p-6 sm:p-8 text-center shadow-[0_0_60px_rgba(239,68,68,0.5)] relative overflow-hidden z-10"
+        :class="{ 'animate-shake border-red-400 bg-red-950/90': isButtonPushed }"
       >
         <!-- Flashing Alert Header -->
         <div class="inline-flex items-center gap-2 px-3 py-1 bg-red-600/30 text-red-300 border border-red-500/50 rounded-full font-mono text-xs font-black uppercase tracking-widest mb-3 animate-pulse">
@@ -251,7 +252,7 @@ const handleEnterParty = () => {
         </div>
 
         <!-- Sioned Party Badge -->
-        <div class="bg-slate-900/95 border-2 border-red-500/50 rounded-2xl p-4 shadow-[0_0_30px_rgba(239,68,68,0.4)] max-w-md mx-auto mb-5">
+        <div class="bg-slate-950/80 border-2 border-red-500/60 rounded-2xl p-4 shadow-[0_0_30px_rgba(239,68,68,0.4)] max-w-md mx-auto mb-5">
           <h2 class="text-2xl sm:text-3xl font-black text-white">
             ¡{{ EVENT_CONFIG.celebrant.name }}'s Birthday Party! 🎂
           </h2>

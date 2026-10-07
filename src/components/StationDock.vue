@@ -12,7 +12,7 @@ const emit = defineEmits(['select'])
 
 const stations = [
   { id: 'minigame', label: '1. Minijuegos', sub: 'Cables y Tarjeta', icon: '⚡', color: 'text-yellow-300' },
-  { id: 'customizer', label: '2. Tu Traje', sub: 'Elige tu Color', icon: '🎨', color: 'text-purple-300' },
+  { id: 'customizer', label: '2. Tu Traje', sub: 'Calcetas y Ropa Cómoda', icon: '🎨', color: 'text-purple-300' },
   { id: 'rsvp', label: '3. Confirmar', sub: 'Sube a la Nave', icon: '📝', color: 'text-emerald-300' },
 ]
 
