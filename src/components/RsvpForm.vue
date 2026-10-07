@@ -66,7 +66,7 @@ const handleSubmit = () => {
 <template>
   <div id="confirmacion" class="w-full max-w-2xl mx-auto my-12 px-4 scroll-mt-20">
     <div
-      class="bg-slate-900/90 border-2 border-emerald-500/40 rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-[0_0_40px_rgba(16,185,129,0.2)] relative overflow-hidden"
+      class="bg-slate-900/95 border-2 border-emerald-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_40px_rgba(16,185,129,0.2)] relative overflow-hidden"
     >
       <!-- Title -->
       <div class="text-center mb-6">

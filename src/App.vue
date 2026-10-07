@@ -1,6 +1,7 @@
 <script setup>
 import confetti from 'canvas-confetti'
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
+import AmongUsIntro from './components/AmongUsIntro.vue'
 import AmongUsMinigame from './components/AmongUsMinigame.vue'
 import CountdownTimer from './components/CountdownTimer.vue'
 import CrewmateAvatar from './components/CrewmateAvatar.vue'
@@ -12,6 +13,18 @@ import RsvpForm from './components/RsvpForm.vue'
 import StarfieldBackground from './components/StarfieldBackground.vue'
 import { EVENT_CONFIG } from './config/event'
 import { sounds } from './utils/audio'
+
+// Intro Cinematic state
+const showIntro = ref(true)
+
+const onIntroComplete = () => {
+  showIntro.value = false
+}
+
+const replayIntro = () => {
+  sounds.playBeep(700, 0.08)
+  showIntro.value = true
+}
 
 // Audio state
 const isMuted = ref(false)
@@ -49,16 +62,6 @@ const triggerEmergencyMeeting = () => {
   })
 }
 
-// Initial confetti on load
-onMounted(() => {
-  setTimeout(() => {
-    confetti({
-      particleCount: 60,
-      spread: 70,
-      origin: { y: 0.25 },
-    })
-  }, 1000)
-})
 </script>
 
 <template>
@@ -66,12 +69,26 @@ onMounted(() => {
     <!-- Starfield Dynamic Canvas Background -->
     <StarfieldBackground />
 
-    <!-- FLOATING AUDIO CONTROLLER -->
-    <div class="fixed top-4 right-4 z-40 flex items-center gap-2">
+    <!-- AMONG US INTRO CINEMATIC (Step 1: ¿Estás listo? -> Step 2: Tripulante de Honor) -->
+    <AmongUsIntro
+      v-if="showIntro"
+      @complete="onIntroComplete"
+    />
+
+    <!-- FLOATING CONTROLLER (Intro Replay, Music & SFX) -->
+    <div v-show="!showIntro" class="fixed top-4 right-4 z-40 flex items-center gap-2">
+      <!-- Replay Cinematic Button -->
+      <button
+        @click="replayIntro"
+        class="bg-slate-900/95 hover:bg-slate-800 text-slate-300 hover:text-white border-2 border-slate-700 hover:border-cyan-500/50 rounded-full px-3 py-2 text-xs font-mono font-bold flex items-center gap-1.5 shadow-lg transition-all active:scale-95 cursor-pointer"
+        title="Volver a ver cinemática inicial"
+      >
+        <span>🎬 Intro</span>
+      </button>
       <!-- Music toggle -->
       <button
         @click="toggleBgm"
-        class="bg-slate-900/90 hover:bg-slate-800 text-cyan-300 border-2 border-cyan-500/40 rounded-full px-3 py-2 text-xs font-mono font-bold flex items-center gap-1.5 shadow-lg backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+        class="bg-slate-900/95 hover:bg-slate-800 text-cyan-300 border-2 border-cyan-500/40 rounded-full px-3 py-2 text-xs font-mono font-bold flex items-center gap-1.5 shadow-lg transition-all active:scale-95 cursor-pointer"
         :class="isBgmActive ? 'border-cyan-400 text-white shadow-[0_0_12px_rgba(6,182,212,0.5)]' : 'opacity-80'"
       >
         <span>{{ isBgmActive ? '🎵 Música: ON' : '🔇 Música' }}</span>
@@ -80,7 +97,7 @@ onMounted(() => {
       <!-- SFX Mute button -->
       <button
         @click="toggleMute"
-        class="w-10 h-10 rounded-full bg-slate-900/90 hover:bg-slate-800 border-2 border-slate-700 hover:border-slate-500 flex items-center justify-center text-sm shadow-lg backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+        class="w-10 h-10 rounded-full bg-slate-900/95 hover:bg-slate-800 border-2 border-slate-700 hover:border-slate-500 flex items-center justify-center text-sm shadow-lg transition-all active:scale-95 cursor-pointer"
         :title="isMuted ? 'Activar Sonidos' : 'Silenciar Sonidos'"
       >
         {{ isMuted ? '🔇' : '🔊' }}
@@ -88,7 +105,10 @@ onMounted(() => {
     </div>
 
     <!-- MAIN CONTENT WRAPPER -->
-    <div class="relative z-10 flex flex-col items-center justify-start min-h-screen pb-16">
+    <div
+      v-show="!showIntro"
+      class="relative z-10 flex flex-col items-center justify-start min-h-screen pb-16 transition-opacity duration-500"
+    >
       
       <!-- HERO / INTRO HEADER -->
       <header class="w-full max-w-4xl mx-auto pt-12 pb-6 px-4 text-center">
@@ -102,7 +122,7 @@ onMounted(() => {
         <div class="my-4 flex justify-center">
           <div class="relative group cursor-pointer" @click="triggerEmergencyMeeting">
             <!-- Glow circle behind -->
-            <div class="absolute inset-0 rounded-full bg-red-500/20 filter blur-2xl transform scale-125 pointer-events-none" />
+            <div class="absolute inset-0 rounded-full bg-red-500/10 border border-red-500/30 transform scale-110 pointer-events-none" />
             
             <CrewmateAvatar
               :color="EVENT_CONFIG.celebrant.favoriteColor"
@@ -112,7 +132,7 @@ onMounted(() => {
               animation="float"
             />
             
-            <div class="mt-2 text-[11px] font-mono text-cyan-300 font-bold bg-slate-900/80 px-3 py-1 rounded-full border border-cyan-500/30 inline-block shadow">
+            <div class="mt-2 text-[11px] font-mono text-cyan-300 font-bold bg-slate-900/95 px-3 py-1 rounded-full border border-cyan-500/30 inline-block shadow">
               ¡Toca a {{ EVENT_CONFIG.celebrant.name }} para reunión! 🚨
             </div>
           </div>
@@ -148,19 +168,19 @@ onMounted(() => {
         <div class="flex flex-wrap items-center justify-center gap-2.5 mt-6">
           <a
             href="#minijuego"
-            class="px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-xs sm:text-sm font-bold text-cyan-300 hover:text-white transition-all backdrop-blur-sm cursor-pointer"
+            class="px-4 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-xs sm:text-sm font-bold text-cyan-300 hover:text-white transition-all cursor-pointer"
           >
             ⚡ Jugar Minijuego
           </a>
           <a
             href="#detalles"
-            class="px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-xs sm:text-sm font-bold text-cyan-300 hover:text-white transition-all backdrop-blur-sm cursor-pointer"
+            class="px-4 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-xs sm:text-sm font-bold text-cyan-300 hover:text-white transition-all cursor-pointer"
           >
             📍 Dónde y Cuándo
           </a>
           <a
             href="#confirmacion"
-            class="px-4 py-2 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/50 text-xs sm:text-sm font-bold text-emerald-300 hover:text-white transition-all backdrop-blur-sm cursor-pointer"
+            class="px-4 py-2 rounded-xl bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-500/50 text-xs sm:text-sm font-bold text-emerald-300 hover:text-white transition-all cursor-pointer"
           >
             📝 Confirmar Asistencia
           </a>
@@ -193,10 +213,17 @@ onMounted(() => {
         <p class="text-[11px] text-slate-600">
           Inspirado en la temática Among Us • Desarrollado con Vue 3 para Vercel
         </p>
-        <div class="pt-4">
+        <div class="pt-4 flex flex-wrap items-center justify-center gap-4 text-xs font-mono">
+          <button
+            @click="replayIntro"
+            class="text-cyan-400 hover:text-cyan-200 underline cursor-pointer"
+          >
+            ↺ Ver cinemática de inicio otra vez
+          </button>
+          <span class="text-slate-600">•</span>
           <a
             href="#"
-            class="inline-block text-cyan-400 hover:text-cyan-200 transition-colors"
+            class="text-slate-400 hover:text-white transition-colors"
           >
             ↑ Volver al inicio de la nave
           </a>

@@ -61,7 +61,7 @@ const handleCalendarClick = () => {
   <div class="relative w-full max-w-xl mx-auto my-6 px-4">
     <!-- Panel Container with glowing border -->
     <div
-      class="bg-slate-900/80 backdrop-blur-md border-2 border-cyan-400/50 rounded-2xl p-5 shadow-[0_0_25px_rgba(6,182,212,0.25)] relative overflow-hidden"
+      class="bg-slate-900/95 border-2 border-cyan-400/50 rounded-2xl p-5 shadow-[0_0_25px_rgba(6,182,212,0.25)] relative overflow-hidden"
     >
       <!-- Top Cyber Decors -->
       <div class="flex items-center justify-between mb-4 border-b border-cyan-500/30 pb-2">

@@ -30,7 +30,7 @@ const openWaze = () => {
     <!-- Details Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <!-- 1. DATE & TIME CARD -->
-      <div class="bg-slate-900/80 border-2 border-cyan-500/30 rounded-2xl p-6 backdrop-blur-md shadow-lg flex flex-col justify-between hover:border-cyan-400 transition-colors">
+      <div class="bg-slate-900/95 border-2 border-cyan-500/30 rounded-2xl p-6 shadow-lg flex flex-col justify-between hover:border-cyan-400 transition-colors">
         <div>
           <div class="flex items-center gap-3 mb-4">
             <div class="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(6,182,212,0.3)]">
@@ -65,7 +65,7 @@ const openWaze = () => {
       </div>
 
       <!-- 2. LOCATION & MAPS CARD -->
-      <div class="bg-slate-900/80 border-2 border-emerald-500/30 rounded-2xl p-6 backdrop-blur-md shadow-lg flex flex-col justify-between hover:border-emerald-400 transition-colors">
+      <div class="bg-slate-900/95 border-2 border-emerald-500/30 rounded-2xl p-6 shadow-lg flex flex-col justify-between hover:border-emerald-400 transition-colors">
         <div>
           <div class="flex items-center gap-3 mb-4">
             <div class="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(16,185,129,0.3)]">
@@ -111,7 +111,7 @@ const openWaze = () => {
       </div>
 
       <!-- 3. DRESS CODE CARD -->
-      <div class="bg-slate-900/80 border-2 border-purple-500/30 rounded-2xl p-6 backdrop-blur-md shadow-lg flex flex-col justify-between hover:border-purple-400 transition-colors">
+      <div class="bg-slate-900/95 border-2 border-purple-500/30 rounded-2xl p-6 shadow-lg flex flex-col justify-between hover:border-purple-400 transition-colors">
         <div>
           <div class="flex items-center gap-3 mb-4">
             <div class="w-12 h-12 rounded-xl bg-purple-500/20 border border-purple-400/50 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(168,85,247,0.3)]">
@@ -139,7 +139,7 @@ const openWaze = () => {
       </div>
 
       <!-- 4. GIFTS / CARGA ÚTIL CARD -->
-      <div class="bg-slate-900/80 border-2 border-pink-500/30 rounded-2xl p-6 backdrop-blur-md shadow-lg flex flex-col justify-between hover:border-pink-400 transition-colors">
+      <div class="bg-slate-900/95 border-2 border-pink-500/30 rounded-2xl p-6 shadow-lg flex flex-col justify-between hover:border-pink-400 transition-colors">
         <div>
           <div class="flex items-center gap-3 mb-4">
             <div class="w-12 h-12 rounded-xl bg-pink-500/20 border border-pink-400/50 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(236,72,153,0.3)]">

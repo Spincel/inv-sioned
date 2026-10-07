@@ -49,7 +49,7 @@ const sizeStyle = computed(() => {
   >
     <svg
       viewBox="0 0 200 240"
-      class="w-full h-full drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
+      class="w-full h-full"
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
@@ -60,11 +60,6 @@ const sizeStyle = computed(() => {
           <stop offset="70%" stop-color="#38bdf8" />
           <stop offset="100%" stop-color="#0284c7" />
         </linearGradient>
-
-        <!-- Body Shadow Clip / Filter -->
-        <filter id="shadow-blur">
-          <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.3" />
-        </filter>
       </defs>
 
       <!-- BACKPACK (OXYGEN TANK) -->

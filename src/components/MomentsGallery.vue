@@ -111,7 +111,7 @@ const closePreview = () => {
       <div
         v-if="selectedPhoto"
         @click="closePreview"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90"
       >
         <div
           @click.stop

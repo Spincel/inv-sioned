@@ -263,6 +263,73 @@ class SoundEngine {
     }
   }
 
+  // Among Us Dramatic Role Reveal Sting
+  playRoleReveal() {
+    if (this.muted) return
+    this.init()
+    if (!this.ctx) return
+
+    const now = this.ctx.currentTime
+
+    // 1. Sub-bass drop
+    const subOsc = this.ctx.createOscillator()
+    const subGain = this.ctx.createGain()
+    subOsc.type = 'sine'
+    subOsc.frequency.setValueAtTime(120, now)
+    subOsc.frequency.exponentialRampToValueAtTime(40, now + 1.0)
+    subGain.gain.setValueAtTime(0.35, now)
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 1.2)
+    subOsc.connect(subGain)
+    subGain.connect(this.ctx.destination)
+    subOsc.start(now)
+    subOsc.stop(now + 1.2)
+
+    // 2. Dramatic Among Us chord hit
+    const chord = [220, 277.18, 329.63, 440]
+    chord.forEach((freq) => {
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      osc.type = 'sawtooth'
+      osc.frequency.setValueAtTime(freq, now + 0.05)
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.98, now + 1.4)
+
+      const filter = this.ctx.createBiquadFilter()
+      filter.type = 'lowpass'
+      filter.frequency.setValueAtTime(1400, now)
+      filter.frequency.exponentialRampToValueAtTime(350, now + 1.4)
+
+      gain.gain.setValueAtTime(0.12, now + 0.05)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.4)
+
+      osc.connect(filter)
+      filter.connect(gain)
+      gain.connect(this.ctx.destination)
+
+      osc.start(now + 0.05)
+      osc.stop(now + 1.4)
+    })
+  }
+
+  // Sci-fi whoosh / door transition
+  playDoorOpen() {
+    if (this.muted) return
+    this.init()
+    if (!this.ctx) return
+
+    const now = this.ctx.currentTime
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(180, now)
+    osc.frequency.exponentialRampToValueAtTime(700, now + 0.25)
+    gain.gain.setValueAtTime(0.2, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3)
+    osc.connect(gain)
+    gain.connect(this.ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.3)
+  }
+
   toggleBgm() {
     if (this.isBgmPlaying) {
       this.stopBgm()

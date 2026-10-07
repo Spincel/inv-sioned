@@ -40,7 +40,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   >
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90"
     >
       <!-- Dialog window styled like the classic Emergency Meeting vote table -->
       <div
