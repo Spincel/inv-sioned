@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import { sounds } from '../utils/audio'
 
 const props = defineProps({
@@ -6,15 +7,25 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  isConfirmed: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['select'])
 
-const stations = [
+const stations = computed(() => [
   { id: 'minigame', label: '1. Minijuegos', sub: 'Cables y Tarjeta', icon: '⚡', color: 'text-yellow-300' },
   { id: 'customizer', label: '2. Tu Traje', sub: 'Calcetas y Ropa Cómoda', icon: '🎨', color: 'text-purple-300' },
-  { id: 'rsvp', label: '3. Confirmar', sub: 'Sube a la Nave', icon: '📝', color: 'text-emerald-300' },
-]
+  {
+    id: 'rsvp',
+    label: props.isConfirmed ? '3. Mi Pase' : '3. Confirmar',
+    sub: props.isConfirmed ? '✅ Registrado (Editar)' : 'Sube a la Nave',
+    icon: props.isConfirmed ? '🎫' : '📝',
+    color: 'text-emerald-300',
+  },
+])
 
 const handleSelect = (stationId) => {
   sounds.playBeep(650, 0.05)

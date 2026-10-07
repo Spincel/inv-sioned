@@ -11,6 +11,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  isConfirmed: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['openStation', 'triggerEmergency', 'updatePositions'])
@@ -241,7 +245,11 @@ const goToStation = (key) => {
 
   walkActiveCrewmateTo(st.x, st.y, () => {
     if (key === 'emergency') {
-      emit('triggerEmergency')
+      if (props.isConfirmed) {
+        emit('openStation', 'rsvp')
+      } else {
+        emit('triggerEmergency')
+      }
     } else {
       emit('openStation', st.stationId)
     }
@@ -409,24 +417,39 @@ const handleKeydown = (e) => {
           </span>
         </div>
 
-        <!-- 3. BOTÓN ROJO DE EMERGENCIA SOBRE LA CAJA DERECHA -> CONFIRMAR ASISTENCIA -->
+        <!-- 3. BOTÓN SOBRE LA CAJA DERECHA -> CONFIRMAR / VER PASE -->
         <div
           @click.stop="goToStation('emergency')"
           class="station-hotspot absolute left-[67%] top-[57%] w-20 h-20 flex flex-col items-center justify-center cursor-pointer group/emerg z-20"
-          title="¡Botón de Emergencia sobre la caja! Toca para confirmar tu asistencia"
+          :title="isConfirmed ? '¡Ya estás registrado! Toca para ver o modificar tu pase' : '¡Botón de Emergencia sobre la caja! Toca para confirmar tu asistencia'"
         >
-          <!-- Red 3D Button sitting directly on the right crate -->
+          <!-- 3D Button sitting directly on the right crate -->
           <div class="relative -mt-2 group-hover/emerg:scale-110 transition-transform">
-            <!-- Pulsing emergency alert ring -->
-            <div class="absolute -inset-1.5 rounded-full bg-red-600/40 animate-ping" />
+            <!-- Pulsing alert ring -->
+            <div
+              class="absolute -inset-1.5 rounded-full animate-ping"
+              :class="isConfirmed ? 'bg-emerald-500/40' : 'bg-red-600/40'"
+            />
             <button
-              class="relative w-11 h-11 bg-gradient-to-b from-red-500 to-red-700 active:translate-y-0.5 rounded-full border-2 border-red-950 shadow-[0_4px_0_#7f1d1d,0_0_20px_rgba(239,68,68,0.9)] flex items-center justify-center text-xl cursor-pointer"
+              class="relative w-11 h-11 bg-gradient-to-b active:translate-y-0.5 rounded-full border-2 flex items-center justify-center text-xl cursor-pointer"
+              :class="
+                isConfirmed
+                  ? 'from-emerald-500 to-teal-700 border-emerald-950 shadow-[0_4px_0_#064e3b,0_0_20px_rgba(16,185,129,0.9)]'
+                  : 'from-red-500 to-red-700 border-red-950 shadow-[0_4px_0_#7f1d1d,0_0_20px_rgba(239,68,68,0.9)]'
+              "
             >
-              🚨
+              {{ isConfirmed ? '🎫' : '🚨' }}
             </button>
           </div>
-          <span class="mt-1 bg-red-600 text-white font-mono font-black text-[8px] uppercase px-2 py-0.5 rounded-full border border-red-300 shadow-[0_0_10px_rgba(239,68,68,0.8)] pointer-events-none whitespace-nowrap animate-bounce-subtle">
-            ¡Confirmar!
+          <span
+            class="mt-1 font-mono font-black text-[8px] uppercase px-2 py-0.5 rounded-full border shadow pointer-events-none whitespace-nowrap animate-bounce-subtle"
+            :class="
+              isConfirmed
+                ? 'bg-emerald-600 text-white border-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.8)]'
+                : 'bg-red-600 text-white border-red-300 shadow-[0_0_10px_rgba(239,68,68,0.8)]'
+            "
+          >
+            {{ isConfirmed ? '✅ Mi Pase (Editar)' : '¡Confirmar!' }}
           </span>
         </div>
 

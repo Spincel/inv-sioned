@@ -1,6 +1,7 @@
 <script setup>
 import confetti from 'canvas-confetti'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import AdminGuestListModal from './components/AdminGuestListModal.vue'
 import AmongUsIntro from './components/AmongUsIntro.vue'
 import AmongUsShipLobby from './components/AmongUsShipLobby.vue'
 import EmergencyMeetingOverlay from './components/EmergencyMeetingOverlay.vue'
@@ -47,6 +48,18 @@ const openStation = (stationId) => {
   isTabletOpen.value = true
 }
 
+// Admin Panel State
+const isAdminOpen = ref(false)
+
+const openAdminModal = () => {
+  sounds.playBeep(750, 0.06)
+  isAdminOpen.value = true
+}
+
+const closeAdminModal = () => {
+  isAdminOpen.value = false
+}
+
 // Guest Customizer state
 const guestCrewmate = ref({
   color: '#06b6d4',
@@ -83,22 +96,44 @@ const showToast = (msg) => {
   }, 4000)
 }
 
-// Persistent Crew Members in Meeting Room / Dropship Lobby
-const STORAGE_KEY = 'sioned_party_crew_v2'
+// Persistent Device Confirmation Memory
+const STORAGE_CONFIRM_KEY = 'sioned_my_confirmation'
+const STORAGE_CREW_KEY = 'sioned_party_crew_v2'
+
+const myConfirmation = ref(null)
+const isConfirmed = computed(() => Boolean(myConfirmation.value && myConfirmation.value.name))
+
 const crewMembers = ref([])
 
 onMounted(async () => {
-  // 1. Load from localStorage for instant display
-  const saved = localStorage.getItem(STORAGE_KEY)
-  if (saved) {
+  // 1. Check if user already confirmed attendance on this device
+  try {
+    const rawConfirm = localStorage.getItem(STORAGE_CONFIRM_KEY)
+    if (rawConfirm) {
+      const parsedConfirm = JSON.parse(rawConfirm)
+      if (parsedConfirm && parsedConfirm.name) {
+        myConfirmation.value = parsedConfirm
+        guestCrewmate.value.color = parsedConfirm.color || guestCrewmate.value.color
+        guestCrewmate.value.shadowColor = parsedConfirm.shadowColor || guestCrewmate.value.shadowColor
+        guestCrewmate.value.hat = parsedConfirm.hat || guestCrewmate.value.hat
+        guestCrewmate.value.colorName = parsedConfirm.colorName || guestCrewmate.value.colorName
+      }
+    }
+  } catch (e) {
+    console.warn('Error reading device confirmation:', e)
+  }
+
+  // 2. Load crew from localStorage for instant display
+  const savedCrew = localStorage.getItem(STORAGE_CREW_KEY)
+  if (savedCrew) {
     try {
-      crewMembers.value = JSON.parse(saved)
+      crewMembers.value = JSON.parse(savedCrew)
     } catch (e) {
       console.error(e)
     }
   }
 
-  // 2. Sync from Vercel /api/rsvp endpoint
+  // 3. Sync from Vercel /api/rsvp endpoint
   try {
     const res = await fetch('/api/rsvp')
     if (res.ok) {
@@ -106,7 +141,7 @@ onMounted(async () => {
       if (data && data.guests && data.guests.length > 0) {
         const existingNames = new Set(crewMembers.value.map((c) => c.name.toLowerCase()))
         data.guests.forEach((g) => {
-          if (!existingNames.has(g.name.toLowerCase())) {
+          if (!existingNames.has(g.name.toLowerCase()) && g.attendance === 'yes') {
             crewMembers.value.push({
               id: g.id || 'guest_' + Date.now(),
               name: g.name,
@@ -123,6 +158,29 @@ onMounted(async () => {
     // Local fallback
   }
 
+  // 4. If device user confirmed, make sure they are prominently present in the room
+  if (myConfirmation.value && myConfirmation.value.attendance === 'yes') {
+    const existingIndex = crewMembers.value.findIndex(
+      (m) => m.isUser || m.name.toLowerCase() === myConfirmation.value.name.toLowerCase()
+    )
+    const userCrewmate = {
+      id: myConfirmation.value.id || 'my_crewmate',
+      name: myConfirmation.value.name,
+      color: myConfirmation.value.color || guestCrewmate.value.color,
+      shadowColor: myConfirmation.value.shadowColor || guestCrewmate.value.shadowColor,
+      hat: myConfirmation.value.hat || guestCrewmate.value.hat,
+      isUser: true,
+      dialog: myConfirmation.value.message || `¡Hola, soy ${myConfirmation.value.name}! ¡Nos vemos en Chak Jumping Park! 🤸‍♂️🎂`,
+    }
+
+    if (existingIndex >= 0) {
+      crewMembers.value[existingIndex] = userCrewmate
+    } else {
+      crewMembers.value.push(userCrewmate)
+    }
+  }
+
+  // 5. Default starter crewmates if empty
   if (!crewMembers.value || crewMembers.value.length === 0) {
     crewMembers.value = [
       {
@@ -151,25 +209,39 @@ onMounted(async () => {
       },
     ]
   }
+
+  // 6. Check URL query params for ?admin=1 to open admin panel automatically
+  const urlParams = new URLSearchParams(window.location.search)
+  if (urlParams.get('admin') === '1' || urlParams.get('admin') === 'true' || window.location.hash === '#admin') {
+    showIntro.value = false
+    isAdminOpen.value = true
+  }
 })
 
-// RSVP Confirm handler -> Adds Among Us character to the ship with their name!
+// RSVP Confirm handler -> Updates device memory and adds Among Us character to the ship
 const handleCrewConfirm = (data) => {
+  myConfirmation.value = data
+  try {
+    localStorage.setItem(STORAGE_CONFIRM_KEY, JSON.stringify(data))
+  } catch (e) {
+    console.warn(e)
+  }
+
   if (data.attendance === 'yes') {
     const newGuest = {
-      id: 'guest-' + Date.now(),
+      id: data.id || ('guest-' + Date.now()),
       name: data.name,
       color: data.color || guestCrewmate.value.color,
       shadowColor: data.shadowColor || guestCrewmate.value.shadowColor,
       hat: data.hat || guestCrewmate.value.hat,
       isUser: true,
-      dialog: `¡Hola a todos, soy ${data.name}! ¡Listo para brincar en Chak Jumping Park! 🤸‍♂️🎂`,
+      dialog: data.message || `¡Hola a todos, soy ${data.name}! ¡Listo para brincar en Chak Jumping Park! 🤸‍♂️🎂`,
     }
 
     // Replace if user previously registered or append
-    crewMembers.value = crewMembers.value.filter((m) => !m.isUser)
+    crewMembers.value = crewMembers.value.filter((m) => !m.isUser && m.name.toLowerCase() !== data.name.toLowerCase())
     crewMembers.value.push(newGuest)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(crewMembers.value))
+    localStorage.setItem(STORAGE_CREW_KEY, JSON.stringify(crewMembers.value))
 
     sounds.playJoin()
     sounds.playTaskComplete()
@@ -181,7 +253,36 @@ const handleCrewConfirm = (data) => {
       colors: ['#ef4444', '#06b6d4', '#ec4899', '#eab308', '#22c55e', '#a855f7'],
     })
 
-    showToast(`🎉 ¡Bienvenido a bordo, ${data.name}! Ya apareces en la nave con Sioned.`)
+    showToast(`🎉 ¡Bienvenido a bordo, ${data.name}! Tu dispositivo está registrado.`)
+  } else {
+    // If declined, remove character from ship
+    crewMembers.value = crewMembers.value.filter((m) => !m.isUser && m.name.toLowerCase() !== data.name.toLowerCase())
+    localStorage.setItem(STORAGE_CREW_KEY, JSON.stringify(crewMembers.value))
+    showToast(`💔 Registro actualizado. Sentimos que no puedas asistir, ${data.name}.`)
+  }
+}
+
+// When guests are updated/deleted in admin panel, reflect on ship
+const onAdminGuestsUpdated = (updatedList) => {
+  if (Array.isArray(updatedList)) {
+    const validAttending = updatedList.filter((g) => g.attendance === 'yes')
+    const userMate = crewMembers.value.find((m) => m.isUser)
+    
+    const freshCrew = validAttending.map((g) => ({
+      id: g.id || 'guest_' + Date.now(),
+      name: g.name,
+      color: g.color || '#06b6d4',
+      shadowColor: g.shadowColor || '#0e7490',
+      hat: g.hat || 'party-hat',
+      dialog: g.message || '¡Listo para la fiesta en Chak Jumping Park! 🤸‍♂️',
+    }))
+
+    if (userMate && !freshCrew.some((m) => m.name.toLowerCase() === userMate.name.toLowerCase())) {
+      freshCrew.push(userMate)
+    }
+
+    crewMembers.value = freshCrew
+    localStorage.setItem(STORAGE_CREW_KEY, JSON.stringify(freshCrew))
   }
 }
 </script>
@@ -214,8 +315,17 @@ const handleCrewConfirm = (data) => {
       </div>
     </Transition>
 
-    <!-- FLOATING CONTROLLER (Intro Replay, Music & SFX) -->
+    <!-- FLOATING CONTROLLER (Intro Replay, Music, SFX & Admin Panel) -->
     <div v-show="!showIntro" class="fixed top-3 right-3 z-40 flex items-center gap-1.5 sm:gap-2">
+      <!-- Admin Guest List Dashboard Button -->
+      <button
+        @click="openAdminModal"
+        class="bg-indigo-950/95 hover:bg-indigo-900 text-indigo-300 hover:text-white border-2 border-indigo-500/70 rounded-full px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-mono font-bold flex items-center gap-1 shadow-lg transition-all active:scale-95 cursor-pointer"
+        title="Panel de Administración (Lista de Invitados y Descarga Excel)"
+      >
+        <span>👑 Admin</span>
+      </button>
+
       <!-- Replay Cinematic Button -->
       <button
         @click="replayIntro"
@@ -253,15 +363,17 @@ const handleCrewConfirm = (data) => {
       <div class="flex-1 w-full flex flex-col justify-between overflow-hidden min-h-0">
         <AmongUsShipLobby
           :crewmates="crewMembers"
+          :is-confirmed="isConfirmed"
           @open-station="openStation"
           @trigger-emergency="triggerEmergency"
         />
       </div>
 
-      <!-- BOTTOM: THE 4-BUTTON DOCK (EXACTLY MATCHING USER'S IMAGE) -->
+      <!-- BOTTOM: THE 3-BUTTON DOCK -->
       <div class="w-full flex-shrink-0 pt-1">
         <StationDock
           :active-station="isTabletOpen ? currentStation : null"
+          :is-confirmed="isConfirmed"
           @select="openStation"
         />
       </div>
@@ -281,6 +393,13 @@ const handleCrewConfirm = (data) => {
       @change-station="currentStation = $event"
       @close="isTabletOpen = false"
       @confirm-rsvp="handleCrewConfirm"
+    />
+
+    <!-- ADMIN GUEST LIST & DASHBOARD MODAL -->
+    <AdminGuestListModal
+      :is-open="isAdminOpen"
+      @close="closeAdminModal"
+      @guest-updated="onAdminGuestsUpdated"
     />
   </div>
 </template>

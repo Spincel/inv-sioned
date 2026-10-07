@@ -1,6 +1,6 @@
 <script setup>
 import confetti from 'canvas-confetti'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { EVENT_CONFIG } from '../config/event'
 import { sounds } from '../utils/audio'
 import CrewmateAvatar from './CrewmateAvatar.vue'
@@ -17,11 +17,51 @@ const props = defineProps({
   },
 })
 
+const STORAGE_CONFIRM_KEY = 'sioned_my_confirmation'
+
 const guestName = ref('')
 const attendance = ref('yes') // 'yes' or 'no'
 const companions = ref('0')
 const message = ref('')
 const isSubmitted = ref(false)
+const hasSavedRecord = ref(false)
+const savedConfirmation = ref(null)
+const isSaving = ref(false)
+
+const emit = defineEmits(['confirm', 'viewShip'])
+
+// Check device memory on load
+onMounted(() => {
+  try {
+    const raw = localStorage.getItem(STORAGE_CONFIRM_KEY)
+    if (raw) {
+      const data = JSON.parse(raw)
+      if (data && data.name) {
+        savedConfirmation.value = data
+        guestName.value = data.name
+        attendance.value = data.attendance || 'yes'
+        companions.value = String(data.companions || '0')
+        message.value = data.message || ''
+        hasSavedRecord.value = true
+        isSubmitted.value = true
+      }
+    }
+  } catch (e) {
+    console.warn('Error reading device confirmation:', e)
+  }
+})
+
+const activeCrewmate = computed(() => {
+  if (savedConfirmation.value) {
+    return {
+      color: savedConfirmation.value.color || props.crewmate.color,
+      shadowColor: savedConfirmation.value.shadowColor || props.crewmate.shadowColor,
+      hat: savedConfirmation.value.hat || props.crewmate.hat,
+      colorName: savedConfirmation.value.colorName || props.crewmate.colorName,
+    }
+  }
+  return props.crewmate
+})
 
 const formattedWhatsAppUrl = computed(() => {
   const phone = EVENT_CONFIG.rsvp.whatsappNumber
@@ -31,7 +71,7 @@ const formattedWhatsAppUrl = computed(() => {
   const text =
     `*REPORTE DE TRIPULACIÓN - CUMPLEAÑOS DE ${EVENT_CONFIG.celebrant.name.toUpperCase()}* ${emoji}\n\n` +
     `👤 *Tripulante:* ${guestName.value || 'Invitado Especial'}\n` +
-    `🎨 *Color de Traje:* ${props.crewmate.colorName || 'Cian'}\n` +
+    `🎨 *Color de Traje:* ${activeCrewmate.value.colorName || 'Cian'}\n` +
     `📌 *Estado:* ${statusText}\n` +
     (attendance.value === 'yes' ? `👥 *Acompañantes:* ${companions.value}\n` : '') +
     (message.value ? `💬 *Mensaje para ${EVENT_CONFIG.celebrant.name}:* "${message.value}"\n\n` : '\n') +
@@ -39,9 +79,6 @@ const formattedWhatsAppUrl = computed(() => {
 
   return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
 })
-
-const emit = defineEmits(['confirm', 'viewShip'])
-const isSaving = ref(false)
 
 const handleSubmit = async () => {
   if (!guestName.value.trim()) {
@@ -54,6 +91,7 @@ const handleSubmit = async () => {
   sounds.playTaskComplete()
 
   const payload = {
+    id: savedConfirmation.value?.id || ('guest_' + Date.now()),
     name: guestName.value.trim(),
     color: props.crewmate.color,
     shadowColor: props.crewmate.shadowColor,
@@ -62,9 +100,19 @@ const handleSubmit = async () => {
     companions: companions.value,
     attendance: attendance.value,
     message: message.value.trim(),
+    updatedAt: new Date().toISOString(),
   }
 
-  // Save to /api/rsvp in background (Vercel serverless endpoint)
+  // 1. Save to Device Memory (localStorage)
+  try {
+    localStorage.setItem(STORAGE_CONFIRM_KEY, JSON.stringify(payload))
+    savedConfirmation.value = payload
+    hasSavedRecord.value = true
+  } catch (err) {
+    console.warn('LocalStorage save error:', err)
+  }
+
+  // 2. Save to /api/rsvp in background (Vercel Serverless Endpoint)
   try {
     await fetch('/api/rsvp', {
       method: 'POST',
@@ -72,7 +120,7 @@ const handleSubmit = async () => {
       body: JSON.stringify(payload),
     })
   } catch (err) {
-    console.warn('Sync /api/rsvp error (fallback a localStorage):', err)
+    console.warn('Sync /api/rsvp fallback error:', err)
   }
 
   isSaving.value = false
@@ -88,6 +136,12 @@ const handleSubmit = async () => {
     emit('confirm', payload)
   }
 }
+
+const cancelEditing = () => {
+  if (hasSavedRecord.value) {
+    isSubmitted.value = true
+  }
+}
 </script>
 
 <template>
@@ -101,71 +155,142 @@ const handleSubmit = async () => {
           REGISTRO DE ASISTENCIA
         </span>
         <h3 class="text-2xl sm:text-3xl font-black text-white mt-1.5">
-          Confirma tu Tripulación (RSVP)
+          {{ isSubmitted ? 'Tu Pase de Abordaje Oficial' : 'Confirma tu Tripulación (RSVP)' }}
         </h3>
         <p class="text-xs sm:text-sm text-slate-300 mt-1 font-mono">
           {{ EVENT_CONFIG.rsvp.deadline }}
         </p>
       </div>
 
-      <!-- SUCCESS BOARDING PASS PREVIEW -->
-      <div v-if="isSubmitted" class="text-center py-4 animate-fade-in">
-        <div class="w-14 h-14 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center text-2xl mx-auto mb-2 shadow-[0_0_15px_rgba(16,185,129,0.4)]">
-          🎫
+      <!-- SUCCESS BOARDING PASS PREVIEW (DEVICE REMEMBERED) -->
+      <div v-if="isSubmitted" class="text-center py-2 animate-fade-in">
+        <!-- Status Pill -->
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/20 border border-emerald-400 rounded-full mb-3 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span class="font-mono text-xs font-black text-emerald-300 uppercase tracking-wider">
+            ✅ Dispositivo Registrado a Bordo
+          </span>
         </div>
-        <h4 class="text-xl font-black text-emerald-300">
-          ¡REGISTRO CONFIRMADO CON ÉXITO!
+
+        <h4 class="text-xl sm:text-2xl font-black text-white">
+          ¡Hola {{ guestName }}!
         </h4>
-        <p class="text-xs sm:text-sm text-slate-200 max-w-md mx-auto mt-1.5 font-mono">
-          ¡Gracias {{ guestName }}! Tu lugar en la tripulación de {{ EVENT_CONFIG.celebrant.name }} ha sido registrado.
+        <p class="text-xs sm:text-sm text-slate-300 max-w-md mx-auto mt-1 font-mono">
+          Tu asistencia ya está registrada en este dispositivo para el cumpleaños de {{ EVENT_CONFIG.celebrant.name }}.
         </p>
 
         <!-- Boarding Pass Card -->
-        <div class="mt-5 max-w-md mx-auto bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-2 border-emerald-400/60 rounded-2xl p-4 shadow-xl text-left flex items-center gap-4">
-          <div class="flex-shrink-0">
+        <div class="mt-4 max-w-md mx-auto bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-2 border-emerald-400/70 rounded-2xl p-4 shadow-[0_0_25px_rgba(16,185,129,0.2)] text-left flex items-center gap-4 relative overflow-hidden">
+          <!-- Subtle Glow Bar on left -->
+          <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-400" />
+
+          <div class="flex-shrink-0 pl-1">
             <CrewmateAvatar
-              :color="crewmate.color"
-              :shadow-color="crewmate.shadowColor"
-              :hat="crewmate.hat"
+              :color="activeCrewmate.color"
+              :shadow-color="activeCrewmate.shadowColor"
+              :hat="activeCrewmate.hat"
               :size="80"
               animation="none"
             />
           </div>
-          <div class="font-mono text-xs space-y-1">
-            <p class="text-emerald-400 font-bold uppercase tracking-wider text-[10px]">
-              PASE DE ABORDAJE OFICIAL
-            </p>
-            <p class="text-white text-base font-black">
+          <div class="font-mono text-xs space-y-1 flex-1 min-w-0">
+            <div class="flex items-center justify-between">
+              <p class="text-emerald-400 font-bold uppercase tracking-wider text-[10px]">
+                PASE OFICIAL DE ABORDAJE
+              </p>
+              <span class="text-[10px] text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/50">
+                #{{ savedConfirmation?.id ? savedConfirmation.id.slice(-4) : 'VIP' }}
+              </span>
+            </div>
+            
+            <p class="text-white text-base font-black truncate">
               {{ guestName }}
             </p>
-            <p class="text-slate-300">
-              Color: {{ crewmate.colorName || 'Cian' }} • Acompañantes: +{{ companions }}
+            
+            <p class="text-slate-300 text-[11px]">
+              Traje: <span class="text-cyan-300 font-bold">{{ activeCrewmate.colorName || 'Cian' }}</span> • Acompañantes: <span class="text-yellow-300 font-bold">+{{ companions }}</span>
             </p>
-            <p class="text-[11px] text-yellow-400 font-bold">
-              ESTADO: TRIPULANTE EN LA NAVE ✅
+
+            <div class="pt-0.5">
+              <span
+                v-if="attendance === 'yes'"
+                class="inline-block text-[10px] text-emerald-300 font-black bg-emerald-900/60 px-2 py-0.5 rounded-full border border-emerald-500/40"
+              >
+                🚀 MISIÓN ACEPTADA (CONFIRMADO)
+              </span>
+              <span
+                v-else
+                class="inline-block text-[10px] text-red-300 font-black bg-red-900/60 px-2 py-0.5 rounded-full border border-red-500/40"
+              >
+                ❌ NO PODRÁ ASISTIR (SABOTAJE)
+              </span>
+            </div>
+
+            <p v-if="message" class="text-[10px] text-slate-400 italic pt-1 truncate">
+              "{{ message }}"
             </p>
           </div>
         </div>
 
+        <!-- Helpful Device Memory Notice -->
+        <div class="mt-3 bg-cyan-950/40 border border-cyan-500/30 rounded-xl px-3 py-2 max-w-md mx-auto text-left flex items-start gap-2">
+          <span class="text-sm">💡</span>
+          <p class="text-[11px] font-mono text-cyan-200/90 leading-tight">
+            <strong>Dispositivo memorizado:</strong> Puedes cerrar esta ventana e interactuar en la nave libremente. Si deseas cambiar tus acompañantes o tu nombre, toca <strong>"Editar mi confirmación"</strong>.
+          </p>
+        </div>
+
         <!-- Action Buttons -->
-        <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <div class="mt-5 flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
             @click="emit('viewShip')"
             class="w-full sm:w-auto py-3 px-6 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black font-mono text-xs sm:text-sm uppercase rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
           >
-            <span>🚀 ¡Ver a mi tripulante en la reunión!</span>
+            <span>🚀 ¡Ir a la Nave con Sioned!</span>
           </button>
+          
           <button
             @click="isSubmitted = false"
-            class="text-xs font-mono text-cyan-400 hover:text-cyan-200 underline cursor-pointer"
+            class="w-full sm:w-auto py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-white border border-cyan-500/40 rounded-xl text-xs font-mono font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
           >
-            Editar datos
+            <span>✏️ Editar mi confirmación</span>
           </button>
+        </div>
+
+        <!-- Optional WhatsApp share -->
+        <div class="text-center pt-4">
+          <a
+            :href="formattedWhatsAppUrl"
+            target="_blank"
+            class="text-[11px] font-mono text-emerald-400 hover:text-emerald-200 underline inline-flex items-center gap-1 cursor-pointer"
+          >
+            <span>💬 Enviar también copia por WhatsApp (Opcional)</span>
+          </a>
         </div>
       </div>
 
-      <!-- RSVP FORM -->
-      <form v-else @submit.prevent="handleSubmit" class="space-y-5">
+      <!-- RSVP EDIT/CREATION FORM -->
+      <form v-else @submit.prevent="handleSubmit" class="space-y-4">
+        <!-- Edit Mode Banner if already confirmed previously -->
+        <div
+          v-if="hasSavedRecord"
+          class="bg-yellow-950/50 border border-yellow-500/50 rounded-xl p-3 flex items-center justify-between gap-2"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-base">✏️</span>
+            <span class="text-xs font-mono text-yellow-200">
+              Editando confirmación de <strong>{{ guestName }}</strong>
+            </span>
+          </div>
+          <button
+            type="button"
+            @click="cancelEditing"
+            class="text-[10px] font-mono text-yellow-300 hover:text-white underline cursor-pointer"
+          >
+            Cancelar y ver pase
+          </button>
+        </div>
+
         <!-- Guest Name -->
         <div>
           <label class="block text-xs font-mono font-bold text-slate-300 uppercase mb-1.5">
@@ -232,9 +357,9 @@ const handleSubmit = async () => {
             class="w-full bg-slate-950/80 border-2 border-slate-700 focus:border-emerald-400 rounded-xl px-4 py-3 text-white text-sm outline-none transition-colors"
           >
             <option value="0">Solo yo (1 persona)</option>
-            <option value="1">+1 Acompañante (2 personas)</option>
-            <option value="2">+2 Acompañantes (3 personas)</option>
-            <option value="3">+3 Acompañantes (4 personas)</option>
+            <option value="1">+1 Acompañante (2 personas en total)</option>
+            <option value="2">+2 Acompañantes (3 personas en total)</option>
+            <option value="3">+3 Acompañantes (4 personas en total)</option>
             <option value="4">+4 o más tripulantes</option>
           </select>
         </div>
@@ -260,11 +385,23 @@ const handleSubmit = async () => {
             class="w-full py-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-slate-950 font-black text-sm uppercase tracking-wider rounded-2xl shadow-[0_0_25px_rgba(16,185,129,0.4)] transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
           >
             <span v-if="isSaving">Guardando en la nave... 🛸</span>
+            <span v-else-if="hasSavedRecord">💾 ¡GUARDAR CAMBIOS EN LA NAVE!</span>
             <span v-else>🚀 ¡CONFIRMAR ASISTENCIA Y SUBIR A LA NAVE!</span>
           </button>
 
+          <!-- Back to pass button if editing -->
+          <div v-if="hasSavedRecord" class="text-center pt-1">
+            <button
+              type="button"
+              @click="cancelEditing"
+              class="text-xs font-mono text-slate-400 hover:text-white underline cursor-pointer"
+            >
+              ↩ Cancelar cambios y volver a mi pase
+            </button>
+          </div>
+
           <!-- Optional WhatsApp Share -->
-          <div class="text-center pt-1">
+          <div v-else class="text-center pt-1">
             <a
               :href="formattedWhatsAppUrl"
               target="_blank"
