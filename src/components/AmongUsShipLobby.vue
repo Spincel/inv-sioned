@@ -1,6 +1,7 @@
 <script setup>
 import confetti from 'canvas-confetti'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import dropshipBg from '../assets/amongus-dropship.jpg'
 import { EVENT_CONFIG } from '../config/event'
 import { sounds } from '../utils/audio'
 import CrewmateAvatar from './CrewmateAvatar.vue'
@@ -12,13 +13,12 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['openStation', 'openEmergency'])
+const emit = defineEmits(['openStation', 'triggerEmergency', 'updatePositions'])
 
-// Active speaking crewmate bubble state
-const activeSpeaker = ref(null)
-let speakerTimer = null
+// Container ref for calculating relative drag coordinates
+const shipContainerRef = ref(null)
 
-// Countdown calculations
+// Countdown timer state
 const now = ref(new Date())
 let timerInterval = null
 
@@ -26,11 +26,13 @@ onMounted(() => {
   timerInterval = setInterval(() => {
     now.value = new Date()
   }, 1000)
+  window.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval)
-  if (speakerTimer) clearTimeout(speakerTimer)
+  window.removeEventListener('keydown', handleKeydown)
+  if (walkingTimer) cancelAnimationFrame(walkingTimer)
 })
 
 const targetTime = computed(() => new Date(EVENT_CONFIG.dateTime.targetDate).getTime())
@@ -40,31 +42,64 @@ const days = computed(() => Math.floor(diff.value / (1000 * 60 * 60 * 24)))
 const hours = computed(() => Math.floor((diff.value / (1000 * 60 * 60)) % 24))
 const minutes = computed(() => Math.floor((diff.value / 1000 / 60) % 60))
 const seconds = computed(() => Math.floor((diff.value / 1000) % 60))
-const isStarted = computed(() => diff.value <= 0)
 
-// Calendar Link
-const googleCalendarUrl = computed(() => {
-  const start = new Date(EVENT_CONFIG.dateTime.targetDate)
-  const end = new Date(start.getTime() + 4 * 60 * 60 * 1000)
-  const formatGCal = (date) => date.toISOString().replace(/-|:|\.\d\d\d/g, '')
-  const title = encodeURIComponent(`🎂 ¡Cumpleaños de ${EVENT_CONFIG.celebrant.name}! (Temática Among Us)`)
-  const details = encodeURIComponent(
-    `¡Estás invitado a la fiesta de cumpleaños de ${EVENT_CONFIG.celebrant.name}!\n\n` +
-    `🚀 Misión: Festejo espacial Among Us\n` +
-    `📍 Lugar: ${EVENT_CONFIG.location.name}\n` +
-    `🕒 Hora: ${EVENT_CONFIG.dateTime.displayTime}\n`
-  )
-  const loc = encodeURIComponent(`${EVENT_CONFIG.location.name}, ${EVENT_CONFIG.location.address}`)
-  const dates = `${formatGCal(start)}/${formatGCal(end)}`
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${loc}`
-})
+// Interactive Crewmate Positions state (Percentages 0-100)
+const localCrew = ref([])
 
-const openCalendar = () => {
-  sounds.playBeep(650, 0.08)
-  window.open(googleCalendarUrl.value, '_blank')
+// Walkable floor limits on the Dropship image
+const BOUNDS = {
+  minX: 16,
+  maxX: 84,
+  minY: 42,
+  maxY: 86,
 }
 
-// Dialog options for crewmates
+const syncCrew = () => {
+  const celebrant = {
+    id: 'sioned',
+    name: 'Sioned',
+    x: 52,
+    y: 56,
+    color: EVENT_CONFIG.celebrant.favoriteColor,
+    shadowColor: '#991b1b',
+    hat: EVENT_CONFIG.celebrant.hat,
+    isCelebrant: true,
+    facingLeft: false,
+    isMoving: false,
+    dialog: '¡Bienvenidos a mi nave de cumpleaños! 🎂✨',
+  }
+
+  // Pre-configured starting slots for guests
+  const defaultSlots = [
+    { x: 30, y: 72 },
+    { x: 70, y: 70 },
+    { x: 60, y: 80 },
+    { x: 40, y: 82 },
+    { x: 22, y: 60 },
+    { x: 78, y: 55 },
+  ]
+
+  const mapped = props.crewmates.map((m, idx) => {
+    const existing = localCrew.value.find((c) => c.id === m.id)
+    const slot = defaultSlots[idx % defaultSlots.length]
+    return {
+      ...m,
+      x: existing ? existing.x : m.x || slot.x,
+      y: existing ? existing.y : m.y || slot.y,
+      facingLeft: existing ? existing.facingLeft : false,
+      isMoving: false,
+    }
+  })
+
+  localCrew.value = [celebrant, ...mapped]
+}
+
+watch(() => props.crewmates, syncCrew, { immediate: true, deep: true })
+
+// Active speech bubble
+const activeSpeaker = ref(null)
+let speakerTimer = null
+
 const funnyDialogs = [
   '¡Ya quiero probar el pastel espacial! 🍰',
   '¡No soy el impostor, lo juro! 🤫',
@@ -75,325 +110,360 @@ const funnyDialogs = [
   '¡La nave está lista para el despegue! 🚀',
 ]
 
-// Tap Sioned Celebrant
-const handleTapSioned = () => {
-  sounds.playPop()
-  sounds.playTaskComplete()
-  confetti({
-    particleCount: 40,
-    spread: 60,
-    origin: { y: 0.5 },
-    colors: ['#ef4444', '#f59e0b', '#ec4899', '#06b6d4'],
-  })
+// Drag & Drop Crewmate Movement
+const draggingId = ref(null)
+const dragOffset = ref({ x: 0, y: 0 })
 
-  activeSpeaker.value = {
-    id: 'sioned',
-    text: `¡Bienvenidos a mi fiesta de cumpleaños! 🎂✨`,
+const handlePointerDown = (mate, e) => {
+  e.preventDefault()
+  sounds.playPop()
+  draggingId.value = mate.id
+
+  if (mate.isCelebrant) {
+    confetti({
+      particleCount: 30,
+      spread: 50,
+      origin: { y: 0.5 },
+      colors: ['#ef4444', '#f59e0b', '#ec4899'],
+    })
   }
 
-  if (speakerTimer) clearTimeout(speakerTimer)
-  speakerTimer = setTimeout(() => {
-    activeSpeaker.value = null
-  }, 3200)
-}
-
-// Tap Crewmate
-const handleTapCrewmate = (mate) => {
-  sounds.playPop()
-  const randomMsg = mate.dialog || funnyDialogs[Math.floor(Math.random() * funnyDialogs.length)]
-  
   activeSpeaker.value = {
     id: mate.id,
-    text: randomMsg,
+    text: mate.dialog || funnyDialogs[Math.floor(Math.random() * funnyDialogs.length)],
   }
 
   if (speakerTimer) clearTimeout(speakerTimer)
   speakerTimer = setTimeout(() => {
     activeSpeaker.value = null
-  }, 3000)
+  }, 2500)
+
+  window.addEventListener('pointermove', handlePointerMove)
+  window.addEventListener('pointerup', handlePointerUp)
 }
 
-// Emergency Button trigger
-const handleEmergencyPress = () => {
-  sounds.playEmergency()
-  confetti({
-    particleCount: 50,
-    spread: 70,
-    origin: { y: 0.6 },
-    colors: ['#ef4444', '#dc2626'],
-  })
-  emit('openStation', 'rsvp')
+const handlePointerMove = (e) => {
+  if (!draggingId.value || !shipContainerRef.value) return
+  const rect = shipContainerRef.value.getBoundingClientRect()
+  
+  const rawX = ((e.clientX - rect.left) / rect.width) * 100
+  const rawY = ((e.clientY - rect.top) / rect.height) * 100
+
+  const clampedX = Math.max(BOUNDS.minX, Math.min(BOUNDS.maxX, rawX))
+  const clampedY = Math.max(BOUNDS.minY, Math.min(BOUNDS.maxY, rawY))
+
+  const mate = localCrew.value.find((c) => c.id === draggingId.value)
+  if (mate) {
+    if (clampedX < mate.x - 0.5) mate.facingLeft = true
+    else if (clampedX > mate.x + 0.5) mate.facingLeft = false
+    mate.x = clampedX
+    mate.y = clampedY
+    mate.isMoving = true
+  }
+}
+
+const handlePointerUp = () => {
+  if (draggingId.value) {
+    const mate = localCrew.value.find((c) => c.id === draggingId.value)
+    if (mate) mate.isMoving = false
+  }
+  draggingId.value = null
+  window.removeEventListener('pointermove', handlePointerMove)
+  window.removeEventListener('pointerup', handlePointerUp)
+}
+
+// Tap-To-Walk on Ship Floor
+let walkingTimer = null
+const handleFloorClick = (e) => {
+  // If clicked a button or already dragging, ignore
+  if (draggingId.value || !shipContainerRef.value) return
+  const target = e.target
+  if (target.closest('.crewmate-touch') || target.closest('button')) return
+
+  const rect = shipContainerRef.value.getBoundingClientRect()
+  const clickX = ((e.clientX - rect.left) / rect.width) * 100
+  const clickY = ((e.clientY - rect.top) / rect.height) * 100
+
+  const targetX = Math.max(BOUNDS.minX, Math.min(BOUNDS.maxX, clickX))
+  const targetY = Math.max(BOUNDS.minY, Math.min(BOUNDS.maxY, clickY))
+
+  // Move user's crewmate, or the first guest
+  const userMate = localCrew.value.find((c) => c.isUser) || localCrew.value.find((c) => !c.isCelebrant) || localCrew.value[0]
+  if (!userMate) return
+
+  sounds.playBeep(450, 0.04)
+  userMate.facingLeft = targetX < userMate.x
+  userMate.isMoving = true
+
+  const startX = userMate.x
+  const startY = userMate.y
+  const duration = 600 // ms
+  const startTime = performance.now()
+
+  if (walkingTimer) cancelAnimationFrame(walkingTimer)
+
+  const step = (now) => {
+    const elapsed = now - startTime
+    const progress = Math.min(1, elapsed / duration)
+    const ease = 1 - Math.pow(1 - progress, 2) // ease-out
+
+    userMate.x = startX + (targetX - startX) * ease
+    userMate.y = startY + (targetY - startY) * ease
+
+    if (progress < 1) {
+      walkingTimer = requestAnimationFrame(step)
+    } else {
+      userMate.isMoving = false
+      walkingTimer = null
+    }
+  }
+
+  walkingTimer = requestAnimationFrame(step)
+}
+
+// Keyboard arrow / WASD movement
+const handleKeydown = (e) => {
+  const userMate = localCrew.value.find((c) => c.isUser) || localCrew.value[0]
+  if (!userMate) return
+
+  const speed = 2.5
+  let moved = false
+
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+    userMate.x = Math.max(BOUNDS.minX, userMate.x - speed)
+    userMate.facingLeft = true
+    moved = true
+  } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+    userMate.x = Math.min(BOUNDS.maxX, userMate.x + speed)
+    userMate.facingLeft = false
+    moved = true
+  } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+    userMate.y = Math.max(BOUNDS.minY, userMate.y - speed)
+    moved = true
+  } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+    userMate.y = Math.min(BOUNDS.maxY, userMate.y + speed)
+    moved = true
+  }
+
+  if (moved) {
+    userMate.isMoving = true
+    sounds.playBeep(400, 0.02)
+    setTimeout(() => {
+      userMate.isMoving = false
+    }, 150)
+  }
+}
+
+// Emergency Meeting CTA
+const onEmergencyClick = () => {
+  emit('triggerEmergency')
 }
 </script>
 
 <template>
-  <div class="relative w-full h-full flex flex-col justify-between overflow-hidden select-none">
+  <div class="relative w-full h-full flex flex-col justify-between items-center select-none overflow-hidden">
     <!-- ========================================================= -->
-    <!-- DROPSHIP HULL / ARCH & CENTRAL HUD COUNTDOWN BOARD       -->
+    <!-- TOP BULKHEAD: MISSION HUD & EVENT COUNTDOWN               -->
     <!-- ========================================================= -->
-    <div class="relative z-10 w-full max-w-5xl mx-auto pt-2 sm:pt-4 px-2 sm:px-4 flex flex-col items-center">
-      <!-- Curved Bulkhead Top Trim with Hazard Warning Stripes -->
-      <div class="w-full flex items-center justify-between px-3 py-1 bg-slate-900/90 border-2 border-slate-700 rounded-t-2xl shadow-lg">
-        <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-          <span class="font-mono text-[10px] sm:text-xs font-black tracking-widest text-emerald-400 uppercase">
-            SISTEMA OPERATIVO: THE SKELD • MISIÓN FIESTA
-          </span>
-        </div>
-        <div class="hidden sm:flex items-center gap-1.5 font-mono text-[11px] text-cyan-300">
-          <span>SALÓN LOS OLIVOS</span>
-          <span class="text-slate-600">•</span>
-          <span>SECTOR NAYARIT</span>
-        </div>
-      </div>
-
-      <!-- Hazard Stripes Line -->
-      <div class="w-full h-2 sm:h-2.5 bg-[repeating-linear-gradient(45deg,#eab308,#eab308_10px,#0f172a_10px,#0f172a_20px)] border-x-2 border-slate-700 opacity-90 shadow-sm" />
-
-      <!-- ========================================================= -->
-      <!-- CENTRAL COCKPIT HUD SCREEN: EVENT COUNTDOWN               -->
-      <!-- ========================================================= -->
-      <div class="w-full bg-slate-950/95 border-x-2 border-b-2 border-cyan-500/50 rounded-b-2xl p-2.5 sm:p-4 shadow-[0_0_30px_rgba(6,182,212,0.25)] relative overflow-hidden">
-        <!-- Sci-Fi Cockpit Window Look -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4">
-          <!-- Event Header & Date Info -->
-          <div class="text-center sm:text-left flex-1 min-w-0">
-            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-600/25 border border-red-500/50 text-red-400 font-mono text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1">
-              <span class="animate-pulse">🎂</span>
-              <span>¡CUMPLEAÑOS DE {{ EVENT_CONFIG.celebrant.name.toUpperCase() }}!</span>
-            </div>
-            <h1 class="text-base sm:text-xl md:text-2xl font-black text-white tracking-tight flex items-center justify-center sm:justify-start gap-2 truncate">
-              <span>📅 {{ EVENT_CONFIG.dateTime.displayDate }}</span>
-            </h1>
-            <p class="text-[11px] sm:text-xs font-mono text-cyan-300 font-bold">
-              HORA: {{ EVENT_CONFIG.dateTime.displayTime }} • Salón de Eventos Los Olivos
-            </p>
+    <header class="relative z-20 w-full max-w-2xl px-2 sm:px-4 pt-1 sm:pt-2 flex flex-col items-center">
+      <div class="w-full bg-slate-950/90 border-2 border-cyan-500/60 rounded-2xl p-2 sm:p-2.5 shadow-[0_0_25px_rgba(6,182,212,0.4)] flex items-center justify-between gap-2">
+        <!-- Event Mission Title -->
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+            <span class="font-mono text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-cyan-300 truncate">
+              🎂 CUMPLEAÑOS DE {{ EVENT_CONFIG.celebrant.name.toUpperCase() }}
+            </span>
           </div>
-
-          <!-- Digital Countdown Blocks -->
-          <div class="flex items-center gap-1.5 sm:gap-2">
-            <!-- Días -->
-            <div class="bg-slate-900 border border-cyan-500/40 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-center min-w-[50px] sm:min-w-[62px] shadow-inner">
-              <div class="text-base sm:text-2xl font-black font-mono text-white leading-none">
-                {{ String(days).padStart(2, '0') }}
-              </div>
-              <div class="text-[9px] sm:text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-wider mt-0.5">
-                DÍAS
-              </div>
-            </div>
-
-            <!-- Horas -->
-            <div class="bg-slate-900 border border-cyan-500/40 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-center min-w-[50px] sm:min-w-[62px] shadow-inner">
-              <div class="text-base sm:text-2xl font-black font-mono text-white leading-none">
-                {{ String(hours).padStart(2, '0') }}
-              </div>
-              <div class="text-[9px] sm:text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-wider mt-0.5">
-                HORAS
-              </div>
-            </div>
-
-            <!-- Minutos -->
-            <div class="bg-slate-900 border border-cyan-500/40 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-center min-w-[50px] sm:min-w-[62px] shadow-inner">
-              <div class="text-base sm:text-2xl font-black font-mono text-white leading-none">
-                {{ String(minutes).padStart(2, '0') }}
-              </div>
-              <div class="text-[9px] sm:text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-wider mt-0.5">
-                MIN
-              </div>
-            </div>
-
-            <!-- Segundos -->
-            <div class="bg-slate-900 border border-pink-500/50 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-center min-w-[50px] sm:min-w-[62px] shadow-inner">
-              <div class="text-base sm:text-2xl font-black font-mono text-pink-400 leading-none animate-pulse">
-                {{ String(seconds).padStart(2, '0') }}
-              </div>
-              <div class="text-[9px] sm:text-[10px] font-mono font-bold text-pink-400 uppercase tracking-wider mt-0.5">
-                SEG
-              </div>
-            </div>
-
-            <!-- Calendar Quick Button -->
-            <button
-              @click="openCalendar"
-              class="hidden md:flex flex-col items-center justify-center bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-400/50 rounded-xl px-2.5 py-2 text-cyan-300 hover:text-white transition-all active:scale-95 cursor-pointer shadow-md text-center"
-              title="Guardar en Google Calendar"
-            >
-              <span class="text-base">📅</span>
-              <span class="text-[9px] font-mono font-bold">Agendar</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ========================================================= -->
-    <!-- DROPSHIP MEETING ROOM / CAFETERIA DECK (MAIN SCENE)       -->
-    <!-- ========================================================= -->
-    <div class="relative flex-1 w-full max-w-5xl mx-auto flex flex-col justify-end items-center px-3 pb-2 sm:pb-4 min-h-0">
-      
-      <!-- Ship Interior Wall Decor & Ambient Lighting -->
-      <div class="absolute inset-x-4 top-2 bottom-8 pointer-events-none rounded-3xl border-2 border-slate-700/40 bg-gradient-to-b from-slate-900/40 via-slate-900/60 to-slate-950/80 -z-10 shadow-2xl">
-        <!-- Floor Perspective Grid Lines -->
-        <div class="absolute inset-x-0 bottom-0 h-40 bg-[radial-gradient(ellipse_at_center,_rgba(6,182,212,0.12)_0%,_transparent_70%)] opacity-80" />
-        <div class="absolute inset-x-0 bottom-0 h-28 border-t border-slate-700/40 bg-slate-900/50" />
-      </div>
-
-      <!-- SPEECH BUBBLE OVER ACTIVE SPEAKER -->
-      <Transition
-        enter-active-class="transition duration-200 ease-out"
-        enter-from-class="opacity-0 translate-y-2 scale-90"
-        enter-to-class="opacity-100 translate-y-0 scale-100"
-        leave-active-class="transition duration-150 ease-in"
-        leave-from-class="opacity-100 scale-100"
-        leave-to-class="opacity-0 scale-90"
-      >
-        <div
-          v-if="activeSpeaker"
-          class="absolute top-2 sm:top-6 z-30 max-w-xs sm:max-w-sm px-4 py-2.5 bg-slate-950/95 border-2 border-cyan-400 rounded-2xl shadow-[0_0_25px_rgba(6,182,212,0.5)] text-center animate-bounce-subtle pointer-events-none"
-        >
-          <p class="font-mono text-xs sm:text-sm font-black text-white">
-            {{ activeSpeaker.text }}
+          <p class="text-[10px] sm:text-xs font-black text-white font-mono truncate">
+            25 OCTUBRE • 3:00 PM • THE SKELD
           </p>
-          <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-slate-950 border-r-2 border-b-2 border-cyan-400 rotate-45" />
-        </div>
-      </Transition>
-
-      <!-- ======================================================= -->
-      <!-- CREW GATHERING AROUND THE MEETING ROOM                  -->
-      <!-- ======================================================= -->
-      <div class="relative w-full flex flex-col items-center justify-end z-20 pb-2">
-        
-        <!-- Central Round Table with Big Red Emergency Button -->
-        <div class="relative flex items-center justify-center my-1 sm:my-2">
-          <!-- Metallic Emergency Table Surface -->
-          <div class="relative w-44 sm:w-60 md:w-72 h-14 sm:h-20 bg-gradient-to-b from-slate-700 via-slate-800 to-slate-900 border-4 border-slate-600 rounded-full shadow-[0_15px_30px_rgba(0,0,0,0.8)] flex items-center justify-center">
-            
-            <!-- Metallic Rim Inner Ring -->
-            <div class="w-36 sm:w-48 md:w-56 h-10 sm:h-14 bg-slate-950/90 rounded-full border-2 border-slate-600 flex items-center justify-center">
-              
-              <!-- BIG RED EMERGENCY BUTTON -->
-              <button
-                @click="handleEmergencyPress"
-                class="group relative -mt-3 sm:-mt-4 w-14 sm:w-20 md:w-24 h-14 sm:h-20 bg-gradient-to-b from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 active:translate-y-1 rounded-full border-4 border-red-950 shadow-[0_8px_0_#7f1d1d,0_15px_20px_rgba(239,68,68,0.5)] transition-all duration-150 cursor-pointer flex items-center justify-center"
-                title="¡Presiona para convocar reunión de tripulación y confirmar!"
-              >
-                <!-- Glowing Core -->
-                <span class="w-8 sm:w-12 h-8 sm:h-12 rounded-full bg-red-400/30 border border-white/40 flex items-center justify-center text-xl sm:text-2xl shadow-inner group-hover:scale-105 transition-transform">
-                  🚨
-                </span>
-              </button>
-            </div>
-
-            <!-- Pulsing Label on Table -->
-            <div
-              @click="handleEmergencyPress"
-              class="absolute -bottom-3 sm:-bottom-4 bg-red-600 hover:bg-red-500 text-white font-mono font-black text-[9px] sm:text-xs uppercase px-3 py-1 rounded-full border-2 border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.6)] cursor-pointer active:scale-95 transition-all"
-            >
-              ¡CONFIRMAR ASISTENCIA! 📝
-            </div>
-          </div>
         </div>
 
-        <!-- ===================================================== -->
-        <!-- CREWMATE CHARACTERS ON THE FLOOR                      -->
-        <!-- ===================================================== -->
-        <div class="w-full flex flex-wrap items-end justify-center gap-3 sm:gap-6 pt-3 sm:pt-4 px-2">
-          
-          <!-- SIONED (CUMPLEAÑERA DE HONOR - CENTER/MAIN) -->
-          <div
-            @click="handleTapSioned"
-            class="relative flex flex-col items-center cursor-pointer group transition-transform active:scale-95 z-20"
-            title="¡Toca a Sioned para escucharla!"
-          >
-            <!-- Crown / Star Badge Floating Above Head -->
-            <div class="mb-1 bg-gradient-to-r from-red-600 via-pink-600 to-red-600 text-white text-[10px] sm:text-xs font-mono font-black px-2.5 py-0.5 rounded-full border-2 border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.6)] flex items-center gap-1 group-hover:scale-105 transition-transform">
-              <span>👑</span>
-              <span>Sioned (Cumpleañera)</span>
-            </div>
-
-            <!-- Avatar -->
-            <div class="relative">
-              <CrewmateAvatar
-                :color="EVENT_CONFIG.celebrant.favoriteColor"
-                shadow-color="#991b1b"
-                :hat="EVENT_CONFIG.celebrant.hat"
-                :size="90"
-                class="sm:hidden"
-                animation="float"
-              />
-              <CrewmateAvatar
-                :color="EVENT_CONFIG.celebrant.favoriteColor"
-                shadow-color="#991b1b"
-                :hat="EVENT_CONFIG.celebrant.hat"
-                :size="120"
-                class="hidden sm:block"
-                animation="float"
-              />
-              <!-- Floor Shadow -->
-              <div class="w-16 sm:w-20 h-3 bg-black/50 rounded-full blur-[2px] mx-auto -mt-2 group-hover:scale-110 transition-transform" />
-            </div>
+        <!-- Live Countdown Mini HUD -->
+        <div class="flex items-center gap-1 font-mono text-center">
+          <div class="bg-slate-900 border border-cyan-500/40 rounded-lg px-1.5 py-1 min-w-[36px] sm:min-w-[42px]">
+            <div class="text-xs sm:text-sm font-black text-white leading-none">{{ String(days).padStart(2, '0') }}</div>
+            <div class="text-[7px] sm:text-[8px] font-bold text-cyan-400">DÍAS</div>
           </div>
-
-          <!-- CONFIRMED GUEST CREWMATES (LIST) -->
-          <div
-            v-for="mate in crewmates"
-            :key="mate.id"
-            @click="handleTapCrewmate(mate)"
-            class="relative flex flex-col items-center cursor-pointer group transition-transform active:scale-95"
-            :title="`¡Toca a ${mate.name}!`"
-          >
-            <!-- Official Among Us Floating Name Pill -->
-            <div
-              class="mb-1 font-mono font-black text-[9px] sm:text-xs px-2 py-0.5 rounded-full border shadow-md flex items-center gap-1 transition-transform group-hover:scale-105"
-              :class="
-                mate.isUser
-                  ? 'bg-emerald-950/95 border-emerald-400 text-emerald-300 ring-2 ring-emerald-500/40'
-                  : 'bg-black/90 border-slate-600 text-white'
-              "
-            >
-              <span v-if="mate.isUser">⭐</span>
-              <span class="truncate max-w-[90px] sm:max-w-[120px]">{{ mate.name }}</span>
-              <span v-if="mate.isUser" class="text-[9px] text-emerald-400 font-bold">(Tú)</span>
-            </div>
-
-            <!-- Avatar -->
-            <div class="relative">
-              <CrewmateAvatar
-                :color="mate.color || '#06b6d4'"
-                :shadow-color="mate.shadowColor || '#0e7490'"
-                :hat="mate.hat || 'party-hat'"
-                :size="72"
-                class="sm:hidden"
-                animation="bounce"
-              />
-              <CrewmateAvatar
-                :color="mate.color || '#06b6d4'"
-                :shadow-color="mate.shadowColor || '#0e7490'"
-                :hat="mate.hat || 'party-hat'"
-                :size="95"
-                class="hidden sm:block"
-                animation="bounce"
-              />
-              <!-- Floor Shadow -->
-              <div class="w-14 sm:w-16 h-2.5 bg-black/40 rounded-full blur-[2px] mx-auto -mt-2 group-hover:scale-110 transition-transform" />
-            </div>
+          <div class="bg-slate-900 border border-cyan-500/40 rounded-lg px-1.5 py-1 min-w-[36px] sm:min-w-[42px]">
+            <div class="text-xs sm:text-sm font-black text-white leading-none">{{ String(hours).padStart(2, '0') }}</div>
+            <div class="text-[7px] sm:text-[8px] font-bold text-cyan-400">HOR</div>
           </div>
-        </div>
-
-        <!-- Crew Status & Quick Add Button -->
-        <div class="mt-2 flex items-center justify-center gap-2 font-mono text-[10px] sm:text-xs text-slate-400">
-          <span class="px-2.5 py-1 bg-slate-900/90 border border-slate-700 rounded-full text-slate-300 flex items-center gap-1.5 shadow">
-            <span>👥</span>
-            <span>Tripulantes a bordo: <strong class="text-white">{{ crewmates.length + 1 }}</strong></span>
-          </span>
-          <button
-            @click="emit('openStation', 'rsvp')"
-            class="px-2.5 py-1 bg-emerald-600/30 hover:bg-emerald-600/50 active:scale-95 text-emerald-300 hover:text-white border border-emerald-500/50 rounded-full font-bold transition-all cursor-pointer shadow flex items-center gap-1"
-          >
-            <span>➕ Sumarme</span>
-          </button>
+          <div class="bg-slate-900 border border-cyan-500/40 rounded-lg px-1.5 py-1 min-w-[36px] sm:min-w-[42px]">
+            <div class="text-xs sm:text-sm font-black text-white leading-none">{{ String(minutes).padStart(2, '0') }}</div>
+            <div class="text-[7px] sm:text-[8px] font-bold text-cyan-400">MIN</div>
+          </div>
+          <div class="bg-slate-900 border border-pink-500/50 rounded-lg px-1.5 py-1 min-w-[36px] sm:min-w-[42px]">
+            <div class="text-xs sm:text-sm font-black text-pink-400 leading-none animate-pulse">{{ String(seconds).padStart(2, '0') }}</div>
+            <div class="text-[7px] sm:text-[8px] font-bold text-pink-400">SEG</div>
+          </div>
         </div>
       </div>
+    </header>
+
+    <!-- ========================================================= -->
+    <!-- DROPSHIP INTERIOR LOBBY (THE OFFICIAL AMONG US SHIP)      -->
+    <!-- ========================================================= -->
+    <main class="relative flex-1 w-full flex items-center justify-center p-2 min-h-0">
+      <!-- The Dropship Pod Container (Floating in Deep Space) -->
+      <div
+        ref="shipContainerRef"
+        @click="handleFloorClick"
+        class="relative w-full max-w-[620px] aspect-[768/712] max-h-[66vh] sm:max-h-[70vh] rounded-3xl border-4 border-slate-700/80 shadow-[0_0_50px_rgba(0,0,0,0.95)] overflow-hidden cursor-crosshair group select-none"
+      >
+        <!-- The Authentic Dropship Lobby Image -->
+        <img
+          :src="dropshipBg"
+          alt="Among Us Dropship Lobby"
+          class="absolute inset-0 w-full h-full object-fill pointer-events-none"
+        />
+
+        <!-- INTERACTIVE LAPTOP ON CRATE (Customizer Shortcut) -->
+        <!-- Located at x: ~34%, y: ~48% on the crate -->
+        <div
+          @click.stop="emit('openStation', 'customizer')"
+          class="absolute left-[30%] top-[45%] w-16 h-16 flex flex-col items-center justify-center cursor-pointer group/laptop z-20"
+          title="Toca la laptop para personalizar tu traje"
+        >
+          <!-- Pulsing Highlight Ring around Laptop -->
+          <div class="w-10 h-10 rounded-xl bg-cyan-400/20 border-2 border-cyan-400/80 animate-pulse flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.8)] group-hover/laptop:scale-110 transition-transform">
+            <span class="text-xs">💻</span>
+          </div>
+          <span class="mt-0.5 bg-black/90 text-[8px] font-mono font-black text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-400/60 shadow pointer-events-none whitespace-nowrap">
+            Personalizar
+          </span>
+        </div>
+
+        <!-- EMERGENCY BUTTON SHORTCUT ON THE FLOOR -->
+        <div
+          @click.stop="onEmergencyClick"
+          class="absolute left-[70%] top-[72%] w-16 h-16 flex flex-col items-center justify-center cursor-pointer group/emerg z-20"
+          title="¡Toca para convocar reunión de emergencia!"
+        >
+          <button
+            class="w-11 h-11 bg-gradient-to-b from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 rounded-full border-2 border-red-950 shadow-[0_4px_0_#7f1d1d,0_0_15px_rgba(239,68,68,0.7)] flex items-center justify-center text-lg active:translate-y-0.5 transition-all cursor-pointer"
+          >
+            🚨
+          </button>
+          <span class="mt-0.5 bg-red-600 text-white font-mono font-black text-[8px] uppercase px-1.5 py-0.2 rounded border border-red-400 shadow pointer-events-none whitespace-nowrap">
+            Reunión
+          </span>
+        </div>
+
+        <!-- FLOATING SPEECH BUBBLE OVER ACTIVE SPEAKER -->
+        <Transition
+          enter-active-class="transition duration-150 ease-out"
+          enter-from-class="opacity-0 scale-75"
+          enter-to-class="opacity-100 scale-100"
+          leave-active-class="transition duration-100 ease-in"
+          leave-from-class="opacity-100 scale-100"
+          leave-to-class="opacity-0 scale-75"
+        >
+          <div
+            v-if="activeSpeaker"
+            class="absolute z-40 max-w-[200px] px-2.5 py-1.5 bg-slate-950/95 border-2 border-cyan-400 rounded-xl text-center shadow-[0_0_20px_rgba(6,182,212,0.6)] pointer-events-none"
+            :style="{
+              left: `${localCrew.find((c) => c.id === activeSpeaker.id)?.x || 50}%`,
+              top: `${(localCrew.find((c) => c.id === activeSpeaker.id)?.y || 60) - 15}%`,
+              transform: 'translateX(-50%)',
+            }"
+          >
+            <p class="font-mono text-[10px] font-black text-white leading-tight">
+              {{ activeSpeaker.text }}
+            </p>
+            <div class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-slate-950 border-r-2 border-b-2 border-cyan-400 rotate-45" />
+          </div>
+        </Transition>
+
+        <!-- ======================================================= -->
+        <!-- CREWMATE CHARACTERS INSIDE THE SHIP (MOVABLE!)          -->
+        <!-- ======================================================= -->
+        <div
+          v-for="mate in localCrew"
+          :key="mate.id"
+          @pointerdown="handlePointerDown(mate, $event)"
+          class="crewmate-touch absolute z-30 flex flex-col items-center cursor-grab active:cursor-grabbing transition-transform"
+          :class="{
+            'animate-waddle': mate.isMoving,
+          }"
+          :style="{
+            left: `${mate.x}%`,
+            top: `${mate.y}%`,
+            transform: `translate(-50%, -75%) scaleX(${mate.facingLeft ? -1 : 1})`,
+          }"
+        >
+          <!-- Official Among Us Floating Name Pill (Unflipped so text is always readable) -->
+          <div
+            class="mb-0.5 font-mono font-black text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full border shadow-md flex items-center gap-1 select-none pointer-events-none"
+            :style="{ transform: `scaleX(${mate.facingLeft ? -1 : 1})` }"
+            :class="
+              mate.isCelebrant
+                ? 'bg-red-600 text-white border-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.7)]'
+                : mate.isUser
+                  ? 'bg-emerald-950/95 border-emerald-400 text-emerald-300 ring-1 ring-emerald-400'
+                  : 'bg-black/85 border-slate-600 text-white'
+            "
+          >
+            <span v-if="mate.isCelebrant">👑</span>
+            <span v-else-if="mate.isUser">⭐</span>
+            <span class="truncate max-w-[80px] sm:max-w-[100px]">{{ mate.name }}</span>
+            <span v-if="mate.isUser" class="text-[8px] text-emerald-400">(Tú)</span>
+          </div>
+
+          <!-- The Among Us Sprite -->
+          <div class="relative">
+            <CrewmateAvatar
+              :color="mate.color || '#06b6d4'"
+              :shadow-color="mate.shadowColor || '#0e7490'"
+              :hat="mate.hat || 'party-hat'"
+              :size="mate.isCelebrant ? 68 : 56"
+              animation="none"
+            />
+            <!-- Floor Shadow -->
+            <div class="w-10 sm:w-12 h-2.5 bg-black/60 rounded-full blur-[1px] mx-auto -mt-1.5 pointer-events-none" />
+          </div>
+        </div>
+
+        <!-- Help Hint for Children -->
+        <div class="absolute bottom-2 left-2 z-20 pointer-events-none">
+          <span class="bg-black/80 text-[8px] sm:text-[9px] font-mono font-bold text-slate-300 px-2 py-0.5 rounded-full border border-slate-700 flex items-center gap-1 shadow">
+            <span>🎮</span>
+            <span>¡Arrastra o toca el piso para moverte!</span>
+          </span>
+        </div>
+      </div>
+    </main>
+
+    <!-- Crew count & prompt -->
+    <div class="relative z-20 mb-1 flex items-center justify-center gap-2 font-mono text-[10px] text-slate-400">
+      <span class="px-2.5 py-0.5 bg-slate-900/90 border border-slate-700 rounded-full text-slate-300 shadow">
+        👥 Tripulantes a bordo: <strong class="text-white">{{ localCrew.length }}</strong>
+      </span>
+      <button
+        @click="emit('openStation', 'rsvp')"
+        class="px-2.5 py-0.5 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 hover:text-white border border-emerald-500/50 rounded-full font-bold transition-all cursor-pointer shadow flex items-center gap-1"
+      >
+        <span>➕ Unirme</span>
+      </button>
     </div>
   </div>
 </template>
+
+<style scoped>
+@keyframes waddle {
+  0% {
+    transform: translate(-50%, -75%) rotate(-4deg);
+  }
+  50% {
+    transform: translate(-50%, -75%) rotate(4deg);
+  }
+  100% {
+    transform: translate(-50%, -75%) rotate(-4deg);
+  }
+}
+
+.animate-waddle {
+  animation: waddle 0.25s infinite ease-in-out;
+}
+</style>

@@ -214,45 +214,77 @@ class SoundEngine {
     })
   }
 
-  // Playful 8-bit space theme melody loop
+  // Authentic Among Us style space ambient theme loop
   startBgm() {
     if (this.muted || this.isBgmPlaying) return
     this.init()
     if (!this.ctx) return
 
     this.isBgmPlaying = true
-    const melody = [
-      { f: 440, d: 0.2 }, { f: 493.88, d: 0.2 }, { f: 523.25, d: 0.25 }, { f: 587.33, d: 0.25 },
-      { f: 659.25, d: 0.3 }, { f: 587.33, d: 0.2 }, { f: 523.25, d: 0.3 }, { f: 440, d: 0.4 },
-      { f: 392, d: 0.2 }, { f: 440, d: 0.2 }, { f: 523.25, d: 0.35 }, { f: 659.25, d: 0.4 }
+
+    // Iconic C minor space synth sequence
+    const notes = [
+      { f: 261.63, d: 0.35 }, // C4
+      { f: 311.13, d: 0.3 },  // Eb4
+      { f: 392.00, d: 0.35 }, // G4
+      { f: 466.16, d: 0.4 },  // Bb4
+      { f: 523.25, d: 0.45 }, // C5
+      { f: 466.16, d: 0.3 },  // Bb4
+      { f: 392.00, d: 0.35 }, // G4
+      { f: 349.23, d: 0.35 }, // F4
+      { f: 311.13, d: 0.4 },  // Eb4
+      { f: 261.63, d: 0.5 },  // C4
+      { f: 196.00, d: 0.4 },  // G3
+      { f: 233.08, d: 0.4 },  // Bb3
     ]
 
-    let noteIndex = 0
-    const playNext = () => {
+    let noteIdx = 0
+    const playStep = () => {
       if (!this.isBgmPlaying || this.muted || !this.ctx) return
-      const note = melody[noteIndex % melody.length]
-      noteIndex++
 
+      const n = notes[noteIdx % notes.length]
+      noteIdx++
       const now = this.ctx.currentTime
+
+      // Synth bell/lead
       const osc = this.ctx.createOscillator()
       const gain = this.ctx.createGain()
+      const filter = this.ctx.createBiquadFilter()
 
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(note.f, now)
+      filter.type = 'lowpass'
+      filter.frequency.setValueAtTime(1400, now)
 
-      gain.gain.setValueAtTime(0.04, now) // Gentle volume
-      gain.gain.exponentialRampToValueAtTime(0.001, now + note.d)
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(n.f, now)
 
-      osc.connect(gain)
+      gain.gain.setValueAtTime(0.08, now)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + n.d + 0.2)
+
+      osc.connect(filter)
+      filter.connect(gain)
       gain.connect(this.ctx.destination)
 
       osc.start(now)
-      osc.stop(now + note.d)
+      osc.stop(now + n.d + 0.2)
 
-      this.bgmTimer = setTimeout(playNext, (note.d + 0.15) * 1000)
+      // Sub-bass drone on measure starts
+      if (noteIdx % 4 === 1) {
+        const bassOsc = this.ctx.createOscillator()
+        const bassGain = this.ctx.createGain()
+        bassOsc.type = 'sine'
+        bassOsc.frequency.setValueAtTime(n.f / 4, now) // 2 octaves down
+        bassGain.gain.setValueAtTime(0.09, now)
+        bassGain.gain.exponentialRampToValueAtTime(0.001, now + 1.2)
+        bassOsc.connect(bassGain)
+        bassGain.connect(this.ctx.destination)
+        bassOsc.start(now)
+        bassOsc.stop(now + 1.2)
+      }
+
+      this.bgmTimer = setTimeout(playStep, (n.d + 0.12) * 1000)
     }
 
-    playNext()
+    playStep()
   }
 
   stopBgm() {

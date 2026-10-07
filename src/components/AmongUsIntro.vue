@@ -1,6 +1,7 @@
 <script setup>
 import confetti from 'canvas-confetti'
 import { ref } from 'vue'
+import emergencyImg from '../assets/emergency-meeting.png'
 import { EVENT_CONFIG } from '../config/event'
 import { sounds } from '../utils/audio'
 import CrewmateAvatar from './CrewmateAvatar.vue'
@@ -12,9 +13,10 @@ const step = ref('prompt')
 const isButtonPushed = ref(false)
 const isTransitioningOut = ref(false)
 
-// 1. Click "¡SÍ, ESTOY LISTO!" -> Lleva a la estación del botón rojo
+// 1. Click "¡SÍ, ESTOY LISTO!" -> Lleva a la estación del botón rojo y arranca la música
 const handleReadyClick = () => {
   sounds.playBeep(650, 0.08)
+  sounds.startBgm()
   step.value = 'button_push'
 }
 
@@ -215,15 +217,17 @@ const handleEnterParty = () => {
         v-else-if="step === 'meeting_reveal'"
         class="max-w-xl w-full text-center py-6 px-4 animate-fade-in relative z-10"
       >
-        <!-- Flashing Emergency Banner -->
-        <div class="bg-red-600 text-white font-mono font-black py-2 px-4 rounded-xl text-xs sm:text-sm tracking-widest uppercase mb-4 shadow-[0_0_25px_rgba(239,68,68,0.8)] flex items-center justify-center gap-2 animate-pulse">
-          <span>🚨</span>
-          <span>EMERGENCY MEETING • REUNIÓN DE EMERGENCIA</span>
-          <span>🚨</span>
+        <!-- Flashing Emergency Banner with Artwork -->
+        <div class="my-2 max-w-sm mx-auto animate-emergency-slam">
+          <img
+            :src="emergencyImg"
+            alt="Emergency Meeting"
+            class="w-full max-h-40 object-contain drop-shadow-[0_0_30px_rgba(239,68,68,0.8)]"
+          />
         </div>
 
         <!-- Title Slam -->
-        <div class="space-y-1 my-3">
+        <div class="space-y-1 my-2">
           <p class="font-mono text-xs uppercase tracking-widest text-cyan-400 font-bold">
             ¡HAY UNA FIESTA ENTRE NOSOTROS!
           </p>

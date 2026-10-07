@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti'
 import { onMounted, ref } from 'vue'
 import AmongUsIntro from './components/AmongUsIntro.vue'
 import AmongUsShipLobby from './components/AmongUsShipLobby.vue'
+import EmergencyMeetingOverlay from './components/EmergencyMeetingOverlay.vue'
 import MissionTabletModal from './components/MissionTabletModal.vue'
 import StarfieldBackground from './components/StarfieldBackground.vue'
 import StationDock from './components/StationDock.vue'
@@ -14,11 +15,26 @@ const showIntro = ref(true)
 
 const onIntroComplete = () => {
   showIntro.value = false
+  if (!isMuted.value && !isBgmActive.value) {
+    isBgmActive.value = sounds.toggleBgm()
+  }
 }
 
 const replayIntro = () => {
   sounds.playBeep(700, 0.08)
   showIntro.value = true
+}
+
+// Emergency Meeting Overlay State (Artwork simulation)
+const isEmergencyActive = ref(false)
+
+const triggerEmergency = () => {
+  isEmergencyActive.value = true
+}
+
+const onEmergencyComplete = () => {
+  isEmergencyActive.value = false
+  openStation('rsvp')
 }
 
 // Tablet Modal & Active Station state (ZERO SCROLL, IN-PLACE OVERLAY)
@@ -211,6 +227,7 @@ const handleCrewConfirm = (data) => {
         <AmongUsShipLobby
           :crewmates="crewMembers"
           @open-station="openStation"
+          @trigger-emergency="triggerEmergency"
         />
       </div>
 
@@ -222,6 +239,12 @@ const handleCrewConfirm = (data) => {
         />
       </div>
     </div>
+
+    <!-- EMERGENCY MEETING ARTWORK OVERLAY (SLAM ANIMATION SIMULATION) -->
+    <EmergencyMeetingOverlay
+      :is-open="isEmergencyActive"
+      @complete="onEmergencyComplete"
+    />
 
     <!-- IN-PLACE MISSION TABLET MODAL (NO SCROLL, FLOATS OVER THE SHIP) -->
     <MissionTabletModal

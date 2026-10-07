@@ -35,79 +35,107 @@ onMounted(() => {
     speed: Math.random() * 0.25 + 0.05,
   }))
 
-  // Helper to create pre-rendered cached mini-astronaut sprites
-  const createMiniAstronautSprite = (color) => {
+  // Helper to create pre-rendered cached mini-astronaut sprites (crisp & visible)
+  const createMiniAstronautSprite = (color, shadowColor = '#1e293b') => {
     const offCanvas = document.createElement('canvas')
-    offCanvas.width = 40
-    offCanvas.height = 50
+    offCanvas.width = 70
+    offCanvas.height = 90
     const offCtx = offCanvas.getContext('2d')
     if (!offCtx) return offCanvas
 
-    offCtx.translate(20, 25)
-    offCtx.scale(0.18, 0.18)
+    offCtx.translate(35, 45)
+    offCtx.scale(0.34, 0.34)
 
-    // Body
-    offCtx.fillStyle = color
-    offCtx.strokeStyle = '#000000'
-    offCtx.lineWidth = 10
+    // Body Stroke
+    offCtx.strokeStyle = '#0c0d14'
+    offCtx.lineWidth = 12
     offCtx.lineJoin = 'round'
 
-    // Backpack
+    // Backpack (Oxygen tank)
+    offCtx.fillStyle = color
     offCtx.beginPath()
-    offCtx.roundRect(-80, -30, 30, 80, 10)
+    offCtx.roundRect(-85, -25, 34, 80, 12)
     offCtx.fill()
     offCtx.stroke()
 
     // Main body
+    offCtx.fillStyle = color
     offCtx.beginPath()
-    offCtx.roundRect(-50, -60, 90, 130, 40)
+    offCtx.roundRect(-52, -65, 96, 130, 42)
     offCtx.fill()
     offCtx.stroke()
 
     // Visor
-    offCtx.fillStyle = '#93c5fd'
+    offCtx.fillStyle = '#7dd3fc'
     offCtx.beginPath()
-    offCtx.roundRect(-20, -35, 65, 40, 18)
+    offCtx.roundRect(-18, -40, 68, 42, 18)
     offCtx.fill()
     offCtx.stroke()
 
     // Visor shine
     offCtx.fillStyle = '#ffffff'
     offCtx.beginPath()
-    offCtx.ellipse(0, -25, 12, 5, -0.2, 0, Math.PI * 2)
+    offCtx.ellipse(0, -30, 14, 6, -0.2, 0, Math.PI * 2)
     offCtx.fill()
 
     return offCanvas
   }
 
-  // Pre-cached sprites
+  // Pre-cached colorful floating astronauts in deep space
   const miniAstronauts = [
     {
-      x: -50,
-      y: height * 0.25,
-      vx: 0.35,
-      vy: 0.12,
-      rot: 0,
-      rotSpeed: 0.004,
+      x: -60,
+      y: height * 0.2,
+      vx: 0.45,
+      vy: 0.15,
+      rot: 0.2,
+      rotSpeed: 0.005,
       sprite: createMiniAstronautSprite('#06b6d4'),
     },
     {
-      x: width + 50,
-      y: height * 0.65,
-      vx: -0.25,
-      vy: -0.08,
-      rot: 1.2,
-      rotSpeed: -0.003,
+      x: width + 60,
+      y: height * 0.4,
+      vx: -0.38,
+      vy: -0.1,
+      rot: 1.4,
+      rotSpeed: -0.004,
       sprite: createMiniAstronautSprite('#ec4899'),
     },
     {
-      x: width * 0.2,
-      y: -60,
-      vx: 0.18,
-      vy: 0.3,
-      rot: 2.1,
-      rotSpeed: 0.005,
+      x: width * 0.15,
+      y: -70,
+      vx: 0.25,
+      vy: 0.35,
+      rot: 2.8,
+      rotSpeed: 0.006,
+      sprite: createMiniAstronautSprite('#ef4444'),
+    },
+    {
+      x: width * 0.85,
+      y: height + 70,
+      vx: -0.3,
+      vy: -0.3,
+      rot: 0.9,
+      rotSpeed: -0.005,
       sprite: createMiniAstronautSprite('#eab308'),
+    },
+    {
+      x: -70,
+      y: height * 0.75,
+      vx: 0.4,
+      vy: -0.18,
+      rot: 3.1,
+      rotSpeed: 0.004,
+      sprite: createMiniAstronautSprite('#84cc16'),
+    },
+    {
+      x: width + 70,
+      y: height * 0.85,
+      vx: -0.42,
+      vy: 0.12,
+      rot: 0.5,
+      rotSpeed: -0.006,
+      sprite: createMiniAstronautSprite('#a855f7'),
     },
   ]
 
@@ -198,7 +226,7 @@ onMounted(() => {
       ctx.save()
       ctx.translate(ast.x, ast.y)
       ctx.rotate(ast.rot)
-      ctx.drawImage(ast.sprite, -20, -25)
+      ctx.drawImage(ast.sprite, -35, -45)
       ctx.restore()
     }
   }
