@@ -5,6 +5,7 @@ import AmongUsMinigame from './AmongUsMinigame.vue'
 import CrewmateCustomizer from './CrewmateCustomizer.vue'
 import MissionDetails from './MissionDetails.vue'
 import RsvpForm from './RsvpForm.vue'
+import StarfieldBackground from './StarfieldBackground.vue'
 
 const props = defineProps({
   isOpen: {
@@ -13,7 +14,7 @@ const props = defineProps({
   },
   stationId: {
     type: String,
-    default: 'details', // 'details' | 'minigame' | 'customizer' | 'rsvp'
+    default: 'minigame', // 'details' | 'minigame' | 'customizer' | 'rsvp'
   },
   guestCrewmate: {
     type: Object,
@@ -23,11 +24,11 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'changeStation', 'confirmRsvp', 'update:guestCrewmate'])
 
+// Primary 3 interactive stations matching the dock
 const stations = [
-  { id: 'details', label: '1. Dónde y Cuándo', icon: '📍', color: 'border-cyan-400 text-cyan-300' },
-  { id: 'minigame', label: '2. Minijuego', icon: '⚡', color: 'border-yellow-400 text-yellow-300' },
-  { id: 'customizer', label: '3. Tu Traje', icon: '🎨', color: 'border-purple-400 text-purple-300' },
-  { id: 'rsvp', label: '4. Confirmar', icon: '📝', color: 'border-emerald-400 text-emerald-300' },
+  { id: 'minigame', label: '1. Minijuegos', icon: '⚡' },
+  { id: 'customizer', label: '2. Tu Traje', icon: '🎨' },
+  { id: 'rsvp', label: '3. Confirmar', icon: '📝' },
 ]
 
 const switchStation = (id) => {
@@ -52,7 +53,8 @@ const prevStation = () => {
   sounds.playBeep(450, 0.05)
   if (props.stationId === 'rsvp') emit('changeStation', 'customizer')
   else if (props.stationId === 'customizer') emit('changeStation', 'minigame')
-  else if (props.stationId === 'minigame') emit('changeStation', 'details')
+  else if (props.stationId === 'minigame') handleClose()
+  else if (props.stationId === 'details') handleClose()
 }
 
 const onCrewmateUpdate = (newVal) => {
@@ -85,65 +87,88 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   >
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 overflow-hidden"
+      class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/40 overflow-hidden"
     >
       <!-- ======================================================== -->
-      <!-- TABLET SHELL: STYLED LIKE AMONG US PERSONAL DATA PAD     -->
+      <!-- TABLET SHELL: TRANSLUCENT SCI-FI AMONG US TERMINAL       -->
       <!-- ======================================================== -->
       <div
-        class="relative w-full max-w-4xl bg-slate-900 border-4 border-slate-700 rounded-3xl shadow-[0_0_60px_rgba(0,0,0,0.9)] flex flex-col max-h-[94vh] sm:max-h-[90vh] overflow-hidden"
+        class="relative w-full max-w-4xl bg-[#060a15]/80 border-2 border-cyan-400/80 rounded-3xl shadow-[0_0_50px_rgba(6,182,212,0.4)] flex flex-col max-h-[94vh] sm:max-h-[90vh] overflow-hidden"
       >
+        <!-- Internal Ambient Space & Drifting Astronauts Canvas inside the Tablet! -->
+        <div class="absolute inset-0 pointer-events-none z-0 opacity-70 overflow-hidden rounded-3xl">
+          <StarfieldBackground />
+        </div>
+
         <!-- Top Tablet Bezel / Header -->
-        <div class="bg-slate-950 border-b-2 border-slate-800 p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+        <div class="relative z-10 bg-slate-950/85 border-b-2 border-slate-800 p-2 sm:p-3 flex flex-col sm:flex-row items-center justify-between gap-2">
           <!-- Station Title & Status -->
           <div class="flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse" />
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
             <span class="font-mono text-xs sm:text-sm font-black text-cyan-300 uppercase tracking-widest">
               TERMINAL DE MISIÓN • THE SKELD
             </span>
           </div>
 
           <!-- Quick Tab Switcher inside Tablet -->
-          <div class="flex items-center gap-1 sm:gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0">
+          <div class="flex items-center gap-1 sm:gap-1.5 overflow-x-auto max-w-full pb-0.5 sm:pb-0">
+            <!-- Details / Venue Tab if active -->
+            <button
+              v-if="stationId === 'details'"
+              @click="switchStation('details')"
+              class="px-2.5 py-1 sm:px-3 sm:py-1 rounded-xl font-mono text-[11px] sm:text-xs font-bold border-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 bg-slate-800 border-emerald-400 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.5)] ring-1 ring-emerald-400/50"
+            >
+              <span>📍</span>
+              <span>Lugar (Chak)</span>
+            </button>
+
+            <!-- 3 Main Stations -->
             <button
               v-for="st in stations"
               :key="st.id"
               @click="switchStation(st.id)"
-              class="px-2.5 py-1.5 sm:px-3 sm:py-1 rounded-xl font-mono text-[11px] sm:text-xs font-bold border-2 transition-all active:scale-95 cursor-pointer whitespace-nowrap flex items-center gap-1"
+              class="px-2.5 py-1 sm:px-3 sm:py-1 rounded-xl font-mono text-[11px] sm:text-xs font-bold border-2 transition-all active:scale-95 cursor-pointer whitespace-nowrap flex items-center gap-1"
               :class="
                 stationId === st.id
-                  ? 'bg-slate-800 border-cyan-400 text-white shadow-[0_0_12px_rgba(6,182,212,0.5)] ring-1 ring-cyan-400/50'
-                  : 'bg-slate-950/80 border-slate-700 text-slate-400 hover:text-slate-200'
+                  ? 'bg-slate-800 border-cyan-400 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.5)] ring-1 ring-cyan-400/50'
+                  : 'bg-slate-950/70 border-slate-700 text-slate-300 hover:text-white'
               "
             >
               <span>{{ st.icon }}</span>
-              <span class="hidden md:inline">{{ st.label }}</span>
+              <span>{{ st.label }}</span>
             </button>
           </div>
 
           <!-- Close / Return to Ship Button -->
           <button
             @click="handleClose"
-            class="px-3 py-1.5 bg-red-600/20 hover:bg-red-600 border border-red-500/50 hover:border-red-400 text-red-300 hover:text-white rounded-xl font-mono text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+            class="px-3 py-1.5 bg-red-600/30 hover:bg-red-600 border border-red-500/60 hover:border-red-400 text-red-200 hover:text-white rounded-xl font-mono text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
             title="Volver a la nave"
           >
             <span>✕</span>
-            <span class="hidden sm:inline">Volver a Nave</span>
+            <span>Volver a Nave</span>
           </button>
         </div>
 
         <!-- ======================================================== -->
         <!-- TABLET CONTENT AREA (INTERNAL SCROLL ONLY)               -->
         <!-- ======================================================== -->
-        <div class="flex-1 overflow-y-auto px-2 sm:px-4 py-3 custom-scrollbar">
-          <!-- Station 1: Dónde y Cuándo -->
+        <div class="relative z-10 flex-1 overflow-y-auto px-2 sm:px-4 py-3 custom-scrollbar">
+          <!-- Station 1: Lugar y Mapa (Chak Jumping Park) -->
           <div v-show="stationId === 'details'">
-            <MissionDetails />
+            <MissionDetails
+              @view-ship="handleClose"
+              @to-minigame="switchStation('minigame')"
+              @to-rsvp="switchStation('rsvp')"
+            />
           </div>
 
           <!-- Station 2: Minijuego de Tareas -->
           <div v-show="stationId === 'minigame'">
-            <AmongUsMinigame />
+            <AmongUsMinigame
+              @to-customizer="switchStation('customizer')"
+              @to-rsvp="switchStation('rsvp')"
+            />
           </div>
 
           <!-- Station 3: Personalizar Traje -->
@@ -151,6 +176,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             <CrewmateCustomizer
               :model-value="guestCrewmate"
               @update:model-value="onCrewmateUpdate"
+              @to-rsvp="switchStation('rsvp')"
             />
           </div>
 
@@ -167,7 +193,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         <!-- ======================================================== -->
         <!-- TABLET BOTTOM NAVIGATION BAR                             -->
         <!-- ======================================================== -->
-        <div class="bg-slate-950 border-t-2 border-slate-800 p-2.5 sm:p-3 flex items-center justify-between gap-2">
+        <div class="relative z-10 bg-slate-950/90 border-t-2 border-slate-800 p-2 sm:p-2.5 flex items-center justify-between gap-2">
           <!-- Back Step Button -->
           <button
             v-if="stationId !== 'details'"
@@ -184,7 +210,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             @click="handleClose"
             class="text-[11px] font-mono text-cyan-400 hover:text-cyan-200 underline cursor-pointer"
           >
-            🚀 Cerrar y ver nave
+            🚀 Volver a la nave
           </button>
 
           <!-- Next Step Button -->

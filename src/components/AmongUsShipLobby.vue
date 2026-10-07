@@ -298,9 +298,14 @@ const handleKeydown = (e) => {
           <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
         </div>
 
-        <p class="text-[10px] sm:text-xs font-mono font-bold text-cyan-300 mb-2">
-          📍 CHAK JUMPING PARK • DOMINGO 25 DE OCTUBRE • 3:00 PM
-        </p>
+        <button
+          @click="goToStation('location')"
+          class="text-[10px] sm:text-xs font-mono font-black text-cyan-300 hover:text-cyan-100 bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-400/40 px-3 py-1 rounded-full mb-2 transition-all cursor-pointer flex items-center gap-1.5 shadow active:scale-95"
+          title="Toca para ver el mapa y detalles de Chak Jumping Park"
+        >
+          <span>📍 CHAK JUMPING PARK • DOMINGO 25 DE OCTUBRE • 3:00 PM</span>
+          <span class="text-xs">👉</span>
+        </button>
 
         <!-- Big Centered Countdown Blocks -->
         <div class="grid grid-cols-4 gap-1.5 sm:gap-2.5 w-full max-w-md">

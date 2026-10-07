@@ -91,33 +91,33 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div id="confirmacion" class="w-full max-w-2xl mx-auto py-2 px-1 sm:px-3">
+  <div id="confirmacion" class="w-full max-w-2xl mx-auto py-2 px-1 sm:px-3 select-none">
     <div
-      class="bg-slate-900/95 border-2 border-emerald-500/40 rounded-3xl p-4 sm:p-6 shadow-[0_0_30px_rgba(16,185,129,0.2)] relative overflow-hidden"
+      class="bg-slate-950/70 border-2 border-emerald-500/50 rounded-3xl p-4 sm:p-6 shadow-[0_0_30px_rgba(16,185,129,0.2)] relative overflow-hidden"
     >
       <!-- Title -->
       <div class="text-center mb-5">
-        <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 font-mono text-xs font-bold uppercase rounded-full border border-emerald-500/30">
+        <span class="px-3.5 py-1 bg-emerald-500/20 text-emerald-300 font-mono text-xs font-black uppercase rounded-full border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
           REGISTRO DE ASISTENCIA
         </span>
         <h3 class="text-2xl sm:text-3xl font-black text-white mt-1.5">
           Confirma tu Tripulación (RSVP)
         </h3>
-        <p class="text-xs sm:text-sm text-slate-300 mt-1">
+        <p class="text-xs sm:text-sm text-slate-300 mt-1 font-mono">
           {{ EVENT_CONFIG.rsvp.deadline }}
         </p>
       </div>
 
       <!-- SUCCESS BOARDING PASS PREVIEW -->
       <div v-if="isSubmitted" class="text-center py-4 animate-fade-in">
-        <div class="w-14 h-14 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center text-2xl mx-auto mb-2">
+        <div class="w-14 h-14 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center text-2xl mx-auto mb-2 shadow-[0_0_15px_rgba(16,185,129,0.4)]">
           🎫
         </div>
         <h4 class="text-xl font-black text-emerald-300">
-          ¡REGISTRO ENVIADO CON ÉXITO!
+          ¡REGISTRO CONFIRMADO CON ÉXITO!
         </h4>
-        <p class="text-xs sm:text-sm text-slate-300 max-w-md mx-auto mt-1.5">
-          ¡Gracias {{ guestName }}! Tu reporte de tripulante ha sido enviado a WhatsApp para la fiesta de {{ EVENT_CONFIG.celebrant.name }}.
+        <p class="text-xs sm:text-sm text-slate-200 max-w-md mx-auto mt-1.5 font-mono">
+          ¡Gracias {{ guestName }}! Tu lugar en la tripulación de {{ EVENT_CONFIG.celebrant.name }} ha sido registrado.
         </p>
 
         <!-- Boarding Pass Card -->

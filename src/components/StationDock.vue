@@ -11,10 +11,9 @@ const props = defineProps({
 const emit = defineEmits(['select'])
 
 const stations = [
-  { id: 'details', label: '1. Dónde y Cuándo', icon: '📍' },
-  { id: 'minigame', label: '2. Minijuego', icon: '⚡' },
-  { id: 'customizer', label: '3. Tu Traje', icon: '🎨' },
-  { id: 'rsvp', label: '4. Confirmar', icon: '📝' },
+  { id: 'minigame', label: '1. Minijuegos', sub: 'Cables y Tarjeta', icon: '⚡', color: 'text-yellow-300' },
+  { id: 'customizer', label: '2. Tu Traje', sub: 'Elige tu Color', icon: '🎨', color: 'text-purple-300' },
+  { id: 'rsvp', label: '3. Confirmar', sub: 'Sube a la Nave', icon: '📝', color: 'text-emerald-300' },
 ]
 
 const handleSelect = (stationId) => {
@@ -24,24 +23,24 @@ const handleSelect = (stationId) => {
 </script>
 
 <template>
-  <div class="w-full max-w-4xl mx-auto px-2 sm:px-4 select-none">
-    <!-- Dock Outer Shell Styled Exactly Like User's Reference -->
+  <div class="w-full max-w-3xl mx-auto px-2 sm:px-4 select-none">
+    <!-- Dock Outer Shell Styled with Space Transparency -->
     <div
-      class="bg-[#0b0f19]/95 border-2 border-slate-700/90 rounded-3xl p-2.5 sm:p-3.5 shadow-[0_10px_35px_rgba(0,0,0,0.8)] backdrop-none"
+      class="bg-[#0b0f19]/90 border-2 border-slate-700/80 rounded-3xl p-2 sm:p-3 shadow-[0_10px_35px_rgba(0,0,0,0.8)]"
     >
       <!-- Title Header -->
-      <p class="text-center font-mono text-[10px] sm:text-xs text-slate-300 uppercase tracking-widest font-black mb-2 flex items-center justify-center gap-1.5">
+      <p class="text-center font-mono text-[10px] sm:text-xs text-slate-300 uppercase tracking-widest font-black mb-1.5 flex items-center justify-center gap-1.5">
         <span>SELECCIONA UNA ESTACIÓN DE LA MISIÓN</span>
         <span class="text-yellow-400">👇</span>
       </p>
 
-      <!-- 4 Action Buttons Grid -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+      <!-- 3 Comfortable Touch Action Buttons Grid -->
+      <div class="grid grid-cols-3 gap-1.5 sm:gap-3">
         <button
           v-for="st in stations"
           :key="st.id"
           @click="handleSelect(st.id)"
-          class="py-2.5 sm:py-3 px-2 sm:px-3 rounded-2xl font-mono font-black text-xs sm:text-sm flex flex-col items-center justify-center gap-1 border-2 transition-all duration-200 cursor-pointer active:scale-95"
+          class="py-2.5 sm:py-3 px-1 sm:px-3 rounded-2xl font-mono font-black text-xs sm:text-sm flex flex-col items-center justify-center gap-0.5 sm:gap-1 border-2 transition-all duration-200 cursor-pointer active:scale-95"
           :class="
             activeStation === st.id
               ? 'bg-slate-800/90 border-cyan-400 text-cyan-200 shadow-[0_0_20px_rgba(6,182,212,0.6)] ring-2 ring-cyan-400/50 scale-[1.02]'
@@ -49,7 +48,8 @@ const handleSelect = (stationId) => {
           "
         >
           <span class="text-xl sm:text-2xl">{{ st.icon }}</span>
-          <span class="leading-tight text-center truncate max-w-full">{{ st.label }}</span>
+          <span class="leading-tight text-center font-bold text-[11px] sm:text-xs md:text-sm">{{ st.label }}</span>
+          <span class="hidden sm:inline text-[9px] text-slate-400 font-normal">{{ st.sub }}</span>
         </button>
       </div>
     </div>

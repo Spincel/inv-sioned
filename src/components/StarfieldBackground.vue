@@ -27,12 +27,13 @@ onMounted(() => {
   window.addEventListener('resize', handleResize, { passive: true })
 
   // 50 lightweight stars
-  const starCount = 50
+  // 100 stars with subtle twinkling
+  const starCount = 100
   const stars = Array.from({ length: starCount }, () => ({
     x: Math.random() * width,
     y: Math.random() * height,
-    radius: Math.random() * 1.2 + 0.6,
-    speed: Math.random() * 0.25 + 0.05,
+    radius: Math.random() * 1.5 + 0.6,
+    speed: Math.random() * 0.32 + 0.08,
   }))
 
   // Helper to create pre-rendered cached mini-astronaut sprites (crisp & visible)
@@ -44,7 +45,7 @@ onMounted(() => {
     if (!offCtx) return offCanvas
 
     offCtx.translate(35, 45)
-    offCtx.scale(0.34, 0.34)
+    offCtx.scale(0.36, 0.36)
 
     // Body Stroke
     offCtx.strokeStyle = '#0c0d14'
@@ -81,67 +82,121 @@ onMounted(() => {
     return offCanvas
   }
 
-  // Pre-cached colorful floating astronauts in deep space
+  // Pre-cached colorful floating astronauts in deep space (12 colors)
   const miniAstronauts = [
     {
       x: -60,
-      y: height * 0.2,
-      vx: 0.45,
+      y: height * 0.15,
+      vx: 0.5,
       vy: 0.15,
       rot: 0.2,
       rotSpeed: 0.005,
-      sprite: createMiniAstronautSprite('#06b6d4'),
+      sprite: createMiniAstronautSprite('#06b6d4'), // Cyan
     },
     {
       x: width + 60,
-      y: height * 0.4,
-      vx: -0.38,
+      y: height * 0.35,
+      vx: -0.42,
       vy: -0.1,
       rot: 1.4,
       rotSpeed: -0.004,
-      sprite: createMiniAstronautSprite('#ec4899'),
+      sprite: createMiniAstronautSprite('#ec4899'), // Pink
     },
     {
       x: width * 0.15,
       y: -70,
-      vx: 0.25,
-      vy: 0.35,
+      vx: 0.28,
+      vy: 0.4,
       rot: 2.8,
       rotSpeed: 0.006,
-      sprite: createMiniAstronautSprite('#ef4444'),
+      sprite: createMiniAstronautSprite('#ef4444'), // Red
     },
     {
       x: width * 0.85,
       y: height + 70,
-      vx: -0.3,
-      vy: -0.3,
+      vx: -0.35,
+      vy: -0.32,
       rot: 0.9,
       rotSpeed: -0.005,
-      sprite: createMiniAstronautSprite('#eab308'),
+      sprite: createMiniAstronautSprite('#eab308'), // Yellow
     },
     {
       x: -70,
-      y: height * 0.75,
-      vx: 0.4,
+      y: height * 0.65,
+      vx: 0.45,
       vy: -0.18,
       rot: 3.1,
       rotSpeed: 0.004,
-      sprite: createMiniAstronautSprite('#84cc16'),
+      sprite: createMiniAstronautSprite('#84cc16'), // Lime
     },
     {
       x: width + 70,
-      y: height * 0.85,
-      vx: -0.42,
-      vy: 0.12,
+      y: height * 0.8,
+      vx: -0.48,
+      vy: 0.14,
       rot: 0.5,
       rotSpeed: -0.006,
-      sprite: createMiniAstronautSprite('#a855f7'),
+      sprite: createMiniAstronautSprite('#a855f7'), // Purple
+    },
+    {
+      x: width * 0.5,
+      y: -80,
+      vx: -0.25,
+      vy: 0.35,
+      rot: 1.8,
+      rotSpeed: 0.004,
+      sprite: createMiniAstronautSprite('#f97316'), // Orange
+    },
+    {
+      x: -70,
+      y: height * 0.9,
+      vx: 0.38,
+      vy: -0.15,
+      rot: 0.7,
+      rotSpeed: -0.005,
+      sprite: createMiniAstronautSprite('#f1f5f9'), // White
+    },
+    {
+      x: width * 0.92,
+      y: -60,
+      vx: -0.32,
+      vy: 0.42,
+      rot: 2.1,
+      rotSpeed: -0.005,
+      sprite: createMiniAstronautSprite('#3b82f6'), // Blue
+    },
+    {
+      x: width * 0.08,
+      y: height + 60,
+      vx: 0.35,
+      vy: -0.3,
+      rot: 1.2,
+      rotSpeed: 0.006,
+      sprite: createMiniAstronautSprite('#22c55e'), // Green
+    },
+    {
+      x: -80,
+      y: height * 0.4,
+      vx: 0.48,
+      vy: 0.18,
+      rot: 0.3,
+      rotSpeed: 0.004,
+      sprite: createMiniAstronautSprite('#334155'), // Dark
+    },
+    {
+      x: width + 80,
+      y: height * 0.88,
+      vx: -0.38,
+      vy: -0.2,
+      rot: 2.4,
+      rotSpeed: -0.005,
+      sprite: createMiniAstronautSprite('#b45309'), // Brown
     },
   ]
 
   // Shooting star
   let shootingStar = null
-  let nextShootingStarTime = Date.now() + 5000
+  let nextShootingStarTime = Date.now() + 4000
 
   const spawnShootingStar = () => {
     shootingStar = {

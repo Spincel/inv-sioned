@@ -5,6 +5,8 @@ import { EVENT_CONFIG } from '../config/event'
 import { sounds } from '../utils/audio'
 import CrewmateAvatar from './CrewmateAvatar.vue'
 
+const emit = defineEmits(['toCustomizer', 'toRsvp'])
+
 const activeTab = ref('wires') // 'wires' or 'card'
 const completedTasks = ref({
   wires: false,
@@ -72,53 +74,41 @@ const connectToRight = (targetId) => {
 // ==========================================
 // TASK 2: SWIPE CARD (DESLIZAR TARJETA)
 // ==========================================
-const cardStatus = ref('idle') // 'idle', 'swiping', 'accepted', 'too_fast', 'too_slow', 'bad_read'
+const cardStatus = ref('idle') // 'idle', 'swiping', 'accepted', 'too_fast', 'too_slow'
 const cardMessage = ref('DESLIZA LA TARJETA VIP')
-const cardPosition = ref(0) // 0 to 100 percentage
-let swipeStartTime = 0
-let isDraggingCard = false
+const isCardSwiping = ref(false)
 
-const onCardPointerDown = (e) => {
-  if (completedTasks.value.card) return
-  isDraggingCard = true
-  swipeStartTime = Date.now()
+const swipeVipCard = (speed = 'perfect') => {
+  if (completedTasks.value.card || isCardSwiping.value) return
+  isCardSwiping.value = true
   cardStatus.value = 'swiping'
-  cardMessage.value = 'LEYENDO TARJETA...'
-  sounds.playBeep(500, 0.05)
-}
+  cardMessage.value = 'LEYENDO BANDA MAGNÉTICA...'
+  sounds.playBeep(520, 0.06)
 
-const onCardPointerMove = (e, containerWidth) => {
-  if (!isDraggingCard) return
-  // Handle drag progress
-  // We can measure relative mouse/touch movement
-}
-
-// Simplified swipe trigger for accessible and smooth mobile & desktop play:
-const testCardSwipe = (speed) => {
-  if (completedTasks.value.card) return
-  cardStatus.value = 'swiping'
-
-  if (speed === 'fast') {
-    sounds.playCardError()
-    cardStatus.value = 'too_fast'
-    cardMessage.value = 'DEMASIADO RÁPIDO. INTENTA DE NUEVO.'
-  } else if (speed === 'slow') {
-    sounds.playCardError()
-    cardStatus.value = 'too_slow'
-    cardMessage.value = 'DEMASIADO LENTO. INTENTA DE NUEVO.'
-  } else {
-    // Perfect!
-    sounds.playCardAccept()
-    cardStatus.value = 'accepted'
-    cardMessage.value = '¡ACEPTADO! PASE VIP CONCEDIDO 🎉'
-    completedTasks.value.card = true
-    if (completedTasks.value.wires) {
-      sounds.playFanfare()
+  setTimeout(() => {
+    isCardSwiping.value = false
+    if (speed === 'fast') {
+      sounds.playCardError()
+      cardStatus.value = 'too_fast'
+      cardMessage.value = 'DEMASIADO RÁPIDO. INTENTA DE NUEVO.'
+    } else if (speed === 'slow') {
+      sounds.playCardError()
+      cardStatus.value = 'too_slow'
+      cardMessage.value = 'DEMASIADO LENTO. INTENTA DE NUEVO.'
     } else {
-      sounds.playTaskComplete()
+      // Perfect!
+      sounds.playCardAccept()
+      cardStatus.value = 'accepted'
+      cardMessage.value = '¡ACEPTADO! PASE VIP CONCEDIDO 🎉'
+      completedTasks.value.card = true
+      if (completedTasks.value.wires) {
+        sounds.playFanfare()
+      } else {
+        sounds.playTaskComplete()
+      }
+      triggerCelebration()
     }
-    triggerCelebration()
-  }
+  }, speed === 'fast' ? 400 : speed === 'slow' ? 1400 : 700)
 }
 
 // Confetti blast
@@ -135,6 +125,7 @@ const resetAllTasks = () => {
   completedTasks.value = { wires: false, card: false }
   cardStatus.value = 'idle'
   cardMessage.value = 'DESLIZA LA TARJETA VIP'
+  isCardSwiping.value = false
   initWires()
 }
 
@@ -147,7 +138,7 @@ onMounted(() => {
   <div id="minijuego" class="w-full max-w-3xl mx-auto py-2 px-1 sm:px-3">
     <!-- Panel Outer Shell styled like Among Us Task Station -->
     <div
-      class="bg-slate-900/90 border-4 border-slate-700 rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(0,0,0,0.8)] relative overflow-hidden"
+      class="bg-slate-950/65 border-2 border-slate-700/80 rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(0,0,0,0.8)] relative overflow-hidden"
     >
       <!-- Task Header & Global Progress Bar -->
       <div class="mb-6">
@@ -232,14 +223,14 @@ onMounted(() => {
       <!-- ========================================== -->
       <div v-if="activeTab === 'wires'" class="relative">
         <div class="text-center mb-4">
-          <p class="text-xs sm:text-sm text-cyan-300/80">
-            Une cada cable de la izquierda con su color correspondiente en la derecha para restablecer la energía del salón de fiestas.
+          <p class="text-xs sm:text-sm text-cyan-300/90 font-mono">
+            ⚡ 1. Toca un cable de la izquierda • 2. Toca su color igual en la derecha para conectarlo.
           </p>
         </div>
 
         <!-- Wire Box Canvas / Container -->
         <div
-          class="bg-zinc-900 border-4 border-zinc-700 rounded-2xl p-4 sm:p-6 shadow-inner relative max-w-lg mx-auto"
+          class="bg-zinc-950/75 border-2 border-zinc-700/80 rounded-2xl p-4 sm:p-6 shadow-inner relative max-w-lg mx-auto select-none"
         >
           <!-- Screws on corners -->
           <div class="absolute top-2 left-2 w-3 h-3 rounded-full bg-zinc-600 border border-zinc-800 flex items-center justify-center text-[8px] text-zinc-900 font-bold">+</div>
@@ -247,9 +238,9 @@ onMounted(() => {
           <div class="absolute bottom-2 left-2 w-3 h-3 rounded-full bg-zinc-600 border border-zinc-800 flex items-center justify-center text-[8px] text-zinc-900 font-bold">+</div>
           <div class="absolute bottom-2 right-2 w-3 h-3 rounded-full bg-zinc-600 border border-zinc-800 flex items-center justify-center text-[8px] text-zinc-900 font-bold">+</div>
 
-          <div class="flex justify-between items-center py-2 sm:py-4">
+          <div class="relative flex justify-between items-center py-2 sm:py-4">
             <!-- Left Side Wires -->
-            <div class="flex flex-col gap-5 sm:gap-6">
+            <div class="flex flex-col gap-4 sm:gap-5 z-10">
               <div
                 v-for="wire in leftWires"
                 :key="wire.id"
@@ -260,40 +251,41 @@ onMounted(() => {
                   @click="selectLeftWire(wire.id)"
                   :disabled="completedTasks.wires || connections[wire.id]"
                   class="group flex items-center transition-all cursor-pointer disabled:cursor-default"
+                  :title="`Toca para conectar cable ${wire.name}`"
                 >
                   <div
-                    class="w-8 sm:w-12 h-6 sm:h-7 rounded-l-md border-2 border-black flex items-center justify-center shadow-md relative transition-transform duration-150"
+                    class="w-10 sm:w-14 h-8 sm:h-9 rounded-l-md border-2 border-black flex items-center justify-center shadow-md relative transition-transform duration-150"
                     :style="{ backgroundColor: wire.color }"
                     :class="{
                       'scale-110 ring-4 ring-white shadow-[0_0_15px_#fff]': activeWire === wire.id,
-                      'opacity-70': connections[wire.id],
+                      'opacity-75': connections[wire.id],
                     }"
                   >
                     <!-- Brass tip -->
-                    <div class="absolute -right-2 w-2 h-3.5 bg-yellow-300 border border-black rounded-r-xs" />
+                    <div class="absolute -right-2 w-2.5 h-4 bg-yellow-300 border border-black rounded-r-xs" />
                   </div>
                 </button>
-                <span class="text-[11px] sm:text-xs font-mono font-bold uppercase text-slate-300">
+                <span class="text-[11px] sm:text-xs font-mono font-black uppercase text-slate-200">
                   {{ wire.name }}
                 </span>
               </div>
             </div>
 
-            <!-- Visual Connection Lines / Hints in the center -->
-            <div class="flex-1 flex flex-col items-center justify-center px-2">
+            <!-- Center Visual Guide & Hints -->
+            <div class="flex-1 flex flex-col items-center justify-center px-2 z-10 pointer-events-none">
               <div
                 v-if="activeWire"
-                class="text-xs font-mono font-bold text-yellow-300 animate-pulse bg-black/60 px-2 py-1 rounded border border-yellow-400/40 text-center"
+                class="text-xs font-mono font-black text-yellow-300 animate-pulse bg-black/80 px-2.5 py-1.5 rounded-xl border border-yellow-400/60 text-center shadow-lg"
               >
-                Toca el contacto {{ leftWires.find(w => w.id === activeWire)?.name }} 👉
+                Toca el {{ leftWires.find(w => w.id === activeWire)?.name }} 👉
               </div>
-              <div v-else-if="!completedTasks.wires" class="text-[11px] text-slate-500 font-mono text-center">
-                Selecciona un cable a la izquierda
+              <div v-else-if="!completedTasks.wires" class="text-[10px] sm:text-xs text-slate-400 font-mono text-center">
+                Elige un cable 👈
               </div>
             </div>
 
             <!-- Right Side Sockets -->
-            <div class="flex flex-col gap-5 sm:gap-6 items-end">
+            <div class="flex flex-col gap-4 sm:gap-5 items-end z-10">
               <div
                 v-for="socket in rightWires"
                 :key="socket.id"
@@ -304,26 +296,27 @@ onMounted(() => {
                   @click="connectToRight(socket.id)"
                   :disabled="completedTasks.wires || connections[socket.id]"
                   class="group flex items-center transition-all cursor-pointer disabled:cursor-default"
+                  :title="`Conectar aquí si coincide con ${socket.name}`"
                 >
                   <div
-                    class="w-8 sm:w-12 h-6 sm:h-7 rounded-r-md border-2 border-black flex items-center justify-center shadow-md relative transition-transform duration-150"
+                    class="w-10 sm:w-14 h-8 sm:h-9 rounded-r-md border-2 border-black flex items-center justify-center shadow-md relative transition-transform duration-150"
                     :style="{ backgroundColor: socket.color }"
                     :class="{
-                      'ring-2 ring-yellow-300 animate-pulse': activeWire === socket.id,
-                      'opacity-100': connections[socket.id],
-                      'opacity-60': !connections[socket.id],
+                      'ring-4 ring-yellow-300 animate-pulse scale-105': activeWire === socket.id,
+                      'opacity-100 ring-2 ring-emerald-400': connections[socket.id],
+                      'opacity-50': !connections[socket.id],
                     }"
                   >
                     <!-- Socket slot -->
-                    <div class="absolute -left-2 w-2 h-3.5 bg-slate-900 border border-black rounded-l-xs flex items-center justify-center">
+                    <div class="absolute -left-2.5 w-2.5 h-4 bg-slate-950 border border-black rounded-l-xs flex items-center justify-center">
                       <div
                         v-if="connections[socket.id]"
-                        class="w-1.5 h-2 bg-yellow-400 rounded-xs"
+                        class="w-1.5 h-2.5 bg-yellow-400 rounded-xs animate-pulse"
                       />
                     </div>
                   </div>
                 </button>
-                <span class="text-[11px] sm:text-xs font-mono font-bold uppercase text-slate-300">
+                <span class="text-[11px] sm:text-xs font-mono font-black uppercase text-slate-200">
                   {{ socket.name }}
                 </span>
               </div>
@@ -331,14 +324,14 @@ onMounted(() => {
           </div>
 
           <!-- Connection Status Notification -->
-          <div class="mt-4 pt-3 border-t border-zinc-700/80 text-center">
+          <div class="mt-4 pt-3 border-t border-zinc-800 text-center">
             <div
               v-if="completedTasks.wires"
-              class="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 px-4 py-2 rounded-xl font-bold font-mono text-sm animate-bounce"
+              class="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/60 px-4 py-2 rounded-xl font-black font-mono text-xs sm:text-sm shadow-[0_0_15px_rgba(16,185,129,0.4)]"
             >
-              <span>⚡ TAREA COMPLETADA: CABLES REPARADOS</span>
+              <span>⚡ ¡CABLES REPARADOS CON ÉXITO! (+50%)</span>
             </div>
-            <div v-else class="text-xs font-mono text-slate-400">
+            <div v-else class="text-xs font-mono text-slate-400 font-bold">
               Cables conectados: {{ Object.keys(connections).length }} / 4
             </div>
           </div>
@@ -350,33 +343,33 @@ onMounted(() => {
       <!-- ========================================== -->
       <div v-else class="relative">
         <div class="text-center mb-4">
-          <p class="text-xs sm:text-sm text-cyan-300/80">
-            Escanea tu credencial de tripulante para conseguir el Pase VIP a la fiesta de {{ EVENT_CONFIG.celebrant.name }}.
+          <p class="text-xs sm:text-sm text-cyan-300/90 font-mono">
+            💳 Escanea tu credencial de tripulante para conseguir el Pase VIP a la fiesta de {{ EVENT_CONFIG.celebrant.name }}.
           </p>
         </div>
 
-        <div class="max-w-md mx-auto bg-zinc-900 border-4 border-zinc-700 rounded-2xl p-5 sm:p-6 shadow-inner text-center">
+        <div class="max-w-md mx-auto bg-zinc-950/75 border-2 border-zinc-700/80 rounded-2xl p-4 sm:p-6 shadow-inner text-center select-none">
           <!-- Card Reader Top Screen -->
           <div
-            class="bg-black border-2 border-zinc-600 rounded-xl p-4 mb-5 shadow-inner transition-colors duration-300"
+            class="bg-black border-2 border-zinc-600 rounded-xl p-3.5 sm:p-4 mb-4 shadow-inner transition-colors duration-300"
             :class="{
-              'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]': cardStatus === 'accepted',
-              'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]': cardStatus === 'too_fast' || cardStatus === 'too_slow',
+              'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)]': cardStatus === 'accepted',
+              'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]': cardStatus === 'too_fast' || cardStatus === 'too_slow',
             }"
           >
             <!-- Indicator LED Lights -->
             <div class="flex justify-end gap-2 mb-2">
               <div
-                class="w-3 h-3 rounded-full border border-black"
+                class="w-3 h-3 rounded-full border border-black transition-colors"
                 :class="cardStatus === 'too_fast' || cardStatus === 'too_slow' ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : 'bg-red-950'"
               />
               <div
-                class="w-3 h-3 rounded-full border border-black"
+                class="w-3 h-3 rounded-full border border-black transition-colors"
                 :class="cardStatus === 'accepted' ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-green-950'"
               />
             </div>
             <p
-              class="font-mono text-sm sm:text-base font-black tracking-wider uppercase"
+              class="font-mono text-xs sm:text-sm md:text-base font-black tracking-wider uppercase"
               :class="{
                 'text-green-400': cardStatus === 'accepted',
                 'text-red-400': cardStatus === 'too_fast' || cardStatus === 'too_slow',
@@ -387,51 +380,58 @@ onMounted(() => {
             </p>
           </div>
 
-          <!-- The VIP Card Preview -->
-          <div class="mb-5 flex justify-center">
+          <!-- The VIP Card Preview with Sliding Animation -->
+          <div class="mb-5 flex justify-center overflow-hidden py-1">
             <div
-              class="w-64 h-36 bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 rounded-xl p-3 text-left shadow-xl border-2 border-white/30 relative overflow-hidden transition-transform duration-300"
-              :class="cardStatus === 'accepted' ? 'scale-105 shadow-[0_0_25px_rgba(236,72,153,0.6)]' : ''"
+              class="w-64 h-36 bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 rounded-xl p-3 text-left shadow-xl border-2 border-white/30 relative overflow-hidden transition-all duration-500"
+              :class="{
+                'scale-105 shadow-[0_0_25px_rgba(236,72,153,0.7)]': cardStatus === 'accepted',
+                'translate-x-12 opacity-80': isCardSwiping,
+              }"
             >
               <!-- Magnetic strip -->
-              <div class="absolute bottom-2 left-0 right-0 h-4 bg-black/70" />
+              <div class="absolute bottom-2 left-0 right-0 h-4 bg-black/80" />
               <!-- Hologram chip -->
-              <div class="w-7 h-5 rounded bg-yellow-300/80 border border-yellow-500 mb-2 flex items-center justify-center">
+              <div class="w-7 h-5 rounded bg-yellow-300/90 border border-yellow-500 mb-2 flex items-center justify-center">
                 <div class="w-3 h-2 border border-black/30 rounded-xs" />
               </div>
-              <p class="text-[10px] uppercase font-mono tracking-widest text-pink-200 font-bold">
-                ACCESO VIP A LA FIESTA
+              <p class="text-[9px] uppercase font-mono tracking-widest text-pink-200 font-black">
+                PASE VIP DE ABORDAJE
               </p>
-              <h4 class="text-base font-black text-white leading-tight">
-                {{ EVENT_CONFIG.celebrant.name }}'s Birthday
+              <h4 class="text-sm sm:text-base font-black text-white leading-tight">
+                Cumpleaños de {{ EVENT_CONFIG.celebrant.name }}
               </h4>
-              <p class="text-[9px] font-mono text-white/80 mt-1">
+              <p class="text-[8px] font-mono text-cyan-200 mt-1">
                 SECTOR THE SKELD • NIVEL 100
               </p>
             </div>
           </div>
 
-          <!-- Reader Swipe Controls -->
-          <div class="flex flex-col gap-2">
-            <p class="text-xs text-slate-400 font-mono mb-1">
-              Prueba la velocidad de deslizamiento:
-            </p>
-            <div class="flex gap-2 justify-center">
+          <!-- Big Interactive Swipe Button -->
+          <div class="space-y-3">
+            <button
+              @click="swipeVipCard('perfect')"
+              :disabled="completedTasks.card || isCardSwiping"
+              class="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black font-mono text-xs sm:text-sm uppercase rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <span v-if="isCardSwiping">Deslizando credencial... 💳</span>
+              <span v-else-if="completedTasks.card">¡Pase VIP Autorizado! ✅</span>
+              <span v-else>💳 ¡Toca para Deslizar Tarjeta VIP! ✨</span>
+            </button>
+
+            <!-- Fun Speed Test Shortcuts for Kids -->
+            <div class="flex gap-2 justify-center pt-1">
               <button
-                @click="testCardSwipe('fast')"
-                class="px-3 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-mono font-bold text-slate-300 rounded-lg border border-slate-600 cursor-pointer"
+                @click="swipeVipCard('fast')"
+                :disabled="completedTasks.card || isCardSwiping"
+                class="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-[10px] sm:text-xs font-mono font-bold text-slate-300 rounded-lg border border-slate-700 cursor-pointer disabled:opacity-40"
               >
                 💨 Muy Rápido
               </button>
               <button
-                @click="testCardSwipe('perfect')"
-                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-xs font-mono font-black text-white rounded-lg border border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.4)] cursor-pointer"
-              >
-                ✨ Deslizar Perfecto
-              </button>
-              <button
-                @click="testCardSwipe('slow')"
-                class="px-3 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-mono font-bold text-slate-300 rounded-lg border border-slate-600 cursor-pointer"
+                @click="swipeVipCard('slow')"
+                :disabled="completedTasks.card || isCardSwiping"
+                class="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-[10px] sm:text-xs font-mono font-bold text-slate-300 rounded-lg border border-slate-700 cursor-pointer disabled:opacity-40"
               >
                 🐢 Muy Lento
               </button>
@@ -445,28 +445,36 @@ onMounted(() => {
       <!-- ========================================== -->
       <div
         v-if="overallProgress === 100"
-        class="mt-6 p-4 sm:p-5 bg-gradient-to-r from-emerald-950/80 via-slate-900 to-cyan-950/80 border-2 border-emerald-400/60 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in shadow-[0_0_30px_rgba(52,211,153,0.3)]"
+        class="mt-6 p-4 sm:p-5 bg-gradient-to-r from-emerald-950/70 via-slate-900/80 to-cyan-950/70 border-2 border-emerald-400/60 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in shadow-[0_0_30px_rgba(52,211,153,0.3)]"
       >
         <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-2xl">
+          <div class="w-12 h-12 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(16,185,129,0.5)]">
             🏆
           </div>
           <div>
-            <h4 class="font-black text-emerald-300 text-lg sm:text-xl">
+            <h4 class="font-black text-emerald-300 text-base sm:text-lg">
               ¡TODAS LAS TAREAS COMPLETADAS!
             </h4>
-            <p class="text-xs sm:text-sm text-slate-300">
+            <p class="text-xs text-slate-300">
               ¡Eres un tripulante legendario! Ya tienes tu pase de abordaje garantizado.
             </p>
           </div>
         </div>
 
-        <a
-          href="#confirmacion"
-          class="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-black font-black text-sm rounded-xl shadow-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
-        >
-          Confirmar Asistencia Ahora 🚀
-        </a>
+        <div class="flex items-center gap-2">
+          <button
+            @click="emit('toCustomizer')"
+            class="px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-black font-mono text-xs sm:text-sm rounded-xl shadow-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
+          >
+            Elegir Traje 🎨 ➡️
+          </button>
+          <button
+            @click="emit('toRsvp')"
+            class="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black font-mono text-xs sm:text-sm rounded-xl shadow-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
+          >
+            Confirmar 🚀
+          </button>
+        </div>
       </div>
     </div>
   </div>
