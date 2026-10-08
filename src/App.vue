@@ -1,6 +1,6 @@
 <script setup>
 import confetti from 'canvas-confetti'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import AdminGuestListModal from './components/AdminGuestListModal.vue'
 import AmongUsIntro from './components/AmongUsIntro.vue'
 import AmongUsShipLobby from './components/AmongUsShipLobby.vue'
@@ -158,29 +158,7 @@ onMounted(async () => {
     // Local fallback
   }
 
-  // 4. If device user confirmed, make sure they are prominently present in the room
-  if (myConfirmation.value && myConfirmation.value.attendance === 'yes') {
-    const existingIndex = crewMembers.value.findIndex(
-      (m) => m.isUser || m.name.toLowerCase() === myConfirmation.value.name.toLowerCase()
-    )
-    const userCrewmate = {
-      id: myConfirmation.value.id || 'my_crewmate',
-      name: myConfirmation.value.name,
-      color: myConfirmation.value.color || guestCrewmate.value.color,
-      shadowColor: myConfirmation.value.shadowColor || guestCrewmate.value.shadowColor,
-      hat: myConfirmation.value.hat || guestCrewmate.value.hat,
-      isUser: true,
-      dialog: myConfirmation.value.message || `¡Hola, soy ${myConfirmation.value.name}! ¡Nos vemos en Chak Jumping Park! 🤸‍♂️🎂`,
-    }
-
-    if (existingIndex >= 0) {
-      crewMembers.value[existingIndex] = userCrewmate
-    } else {
-      crewMembers.value.push(userCrewmate)
-    }
-  }
-
-  // 5. Default starter crewmates if empty
+  // 4. Default starter crewmates if empty
   if (!crewMembers.value || crewMembers.value.length === 0) {
     crewMembers.value = [
       {
@@ -210,6 +188,32 @@ onMounted(async () => {
     ]
   }
 
+  // 5. Ensure user's crewmate is always present in the room with their chosen suit
+  if (!myConfirmation.value || myConfirmation.value.attendance === 'yes') {
+    const existingIndex = crewMembers.value.findIndex(
+      (m) => m.isUser || (myConfirmation.value && m.name.toLowerCase() === myConfirmation.value.name.toLowerCase())
+    )
+    const userCrewmate = {
+      id: myConfirmation.value?.id || 'my_user_mate',
+      name: myConfirmation.value?.name || 'Tú',
+      color: guestCrewmate.value.color,
+      shadowColor: guestCrewmate.value.shadowColor,
+      hat: guestCrewmate.value.hat,
+      colorName: guestCrewmate.value.colorName,
+      isUser: true,
+      dialog: myConfirmation.value?.message || '¡Soy yo! Puedes cambiar mi traje en la laptop. 🎨',
+    }
+
+    if (existingIndex >= 0) {
+      crewMembers.value[existingIndex] = {
+        ...crewMembers.value[existingIndex],
+        ...userCrewmate,
+      }
+    } else {
+      crewMembers.value.unshift(userCrewmate)
+    }
+  }
+
   // 6. Check URL query params for ?admin=1 to open admin panel automatically
   const urlParams = new URLSearchParams(window.location.search)
   if (urlParams.get('admin') === '1' || urlParams.get('admin') === 'true' || window.location.hash === '#admin') {
@@ -217,6 +221,61 @@ onMounted(async () => {
     isAdminOpen.value = true
   }
 })
+
+// Synchronize user crewmate on the ship lobby with guestCrewmate in real time
+watch(
+  guestCrewmate,
+  (newVal) => {
+    if (!newVal) return
+
+    // If user explicitly declined, don't show on ship
+    if (myConfirmation.value && myConfirmation.value.attendance === 'no') return
+
+    const userIndex = crewMembers.value.findIndex(
+      (m) => m.isUser || (myConfirmation.value && m.name.toLowerCase() === myConfirmation.value.name.toLowerCase())
+    )
+
+    const updatedUser = {
+      id: myConfirmation.value?.id || 'my_user_mate',
+      name: myConfirmation.value?.name || 'Tú',
+      color: newVal.color,
+      shadowColor: newVal.shadowColor,
+      hat: newVal.hat,
+      colorName: newVal.colorName,
+      isUser: true,
+      dialog: myConfirmation.value?.message || '¡Soy yo! Puedes cambiar mi traje en la laptop. 🎨',
+    }
+
+    if (userIndex >= 0) {
+      crewMembers.value[userIndex] = {
+        ...crewMembers.value[userIndex],
+        ...updatedUser,
+      }
+    } else {
+      crewMembers.value.unshift(updatedUser)
+    }
+
+    // If device was previously confirmed, keep saved confirmation colors up to date
+    if (myConfirmation.value) {
+      myConfirmation.value.color = newVal.color
+      myConfirmation.value.shadowColor = newVal.shadowColor
+      myConfirmation.value.hat = newVal.hat
+      myConfirmation.value.colorName = newVal.colorName
+      try {
+        localStorage.setItem(STORAGE_CONFIRM_KEY, JSON.stringify(myConfirmation.value))
+      } catch (e) {
+        console.warn(e)
+      }
+    }
+
+    try {
+      localStorage.setItem(STORAGE_CREW_KEY, JSON.stringify(crewMembers.value))
+    } catch (e) {
+      console.warn(e)
+    }
+  },
+  { deep: true }
+)
 
 // RSVP Confirm handler -> Updates device memory and adds Among Us character to the ship
 const handleCrewConfirm = (data) => {
@@ -228,19 +287,25 @@ const handleCrewConfirm = (data) => {
   }
 
   if (data.attendance === 'yes') {
+    if (data.color) guestCrewmate.value.color = data.color
+    if (data.shadowColor) guestCrewmate.value.shadowColor = data.shadowColor
+    if (data.hat) guestCrewmate.value.hat = data.hat
+    if (data.colorName) guestCrewmate.value.colorName = data.colorName
+
     const newGuest = {
       id: data.id || ('guest-' + Date.now()),
       name: data.name,
       color: data.color || guestCrewmate.value.color,
       shadowColor: data.shadowColor || guestCrewmate.value.shadowColor,
       hat: data.hat || guestCrewmate.value.hat,
+      colorName: data.colorName || guestCrewmate.value.colorName,
       isUser: true,
       dialog: data.message || `¡Hola a todos, soy ${data.name}! ¡Listo para brincar en Chak Jumping Park! 🤸‍♂️🎂`,
     }
 
-    // Replace if user previously registered or append
+    // Replace if user previously registered or prepend to keep front & center
     crewMembers.value = crewMembers.value.filter((m) => !m.isUser && m.name.toLowerCase() !== data.name.toLowerCase())
-    crewMembers.value.push(newGuest)
+    crewMembers.value.unshift(newGuest)
     localStorage.setItem(STORAGE_CREW_KEY, JSON.stringify(crewMembers.value))
 
     sounds.playJoin()

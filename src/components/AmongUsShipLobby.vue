@@ -83,8 +83,9 @@ const syncCrew = () => {
 
   // Pre-configured starting slots for guests (open central room floor)
   const defaultSlots = [
-    { x: 44, y: 72 },
-    { x: 56, y: 72 },
+    { x: 50, y: 72 }, // Slot for user: front and center!
+    { x: 40, y: 72 },
+    { x: 60, y: 72 },
     { x: 50, y: 82 },
     { x: 38, y: 78 },
     { x: 62, y: 78 },
@@ -92,8 +93,8 @@ const syncCrew = () => {
   ]
 
   const mapped = props.crewmates.map((m, idx) => {
-    const existing = localCrew.value.find((c) => c.id === m.id)
-    const slot = defaultSlots[idx % defaultSlots.length]
+    const existing = localCrew.value.find((c) => (m.id && c.id === m.id) || (m.isUser && c.isUser))
+    const slot = m.isUser ? { x: 50, y: 72 } : defaultSlots[idx % defaultSlots.length]
     return {
       ...m,
       x: existing ? existing.x : m.x || slot.x,

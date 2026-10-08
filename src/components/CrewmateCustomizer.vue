@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { EVENT_CONFIG } from '../config/event'
 import { sounds } from '../utils/audio'
 import CrewmateAvatar from './CrewmateAvatar.vue'
@@ -16,8 +16,24 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'toRsvp'])
 
-const selectedColor = ref(props.modelValue.color || '#06b6d4')
-const selectedHat = ref(props.modelValue.hat || 'party-hat')
+const selectedColor = ref(props.modelValue?.color || '#06b6d4')
+const selectedHat = ref(props.modelValue?.hat || 'party-hat')
+
+// Keep in sync with parent updates
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    if (newVal) {
+      if (newVal.color && newVal.color !== selectedColor.value) {
+        selectedColor.value = newVal.color
+      }
+      if (newVal.hat && newVal.hat !== selectedHat.value) {
+        selectedHat.value = newVal.hat
+      }
+    }
+  },
+  { deep: true }
+)
 
 const hats = [
   { id: 'party-hat', label: 'Gorrito Fiesta 🥳' },
@@ -54,11 +70,12 @@ const randomizeOutfit = () => {
 }
 
 const emitChange = () => {
+  const crew = EVENT_CONFIG.crewColors.find((c) => c.hex === selectedColor.value) || EVENT_CONFIG.crewColors[1]
   emit('update:modelValue', {
     color: selectedColor.value,
-    shadowColor: currentCrew.value?.dark,
+    shadowColor: crew.dark,
     hat: selectedHat.value,
-    colorName: currentCrew.value?.name,
+    colorName: crew.name,
   })
 }
 </script>

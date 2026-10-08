@@ -1,6 +1,6 @@
 <script setup>
 import confetti from 'canvas-confetti'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { EVENT_CONFIG } from '../config/event'
 import { sounds } from '../utils/audio'
 import CrewmateAvatar from './CrewmateAvatar.vue'
@@ -51,17 +51,32 @@ onMounted(() => {
   }
 })
 
+// Always prioritize the currently selected crewmate suit
 const activeCrewmate = computed(() => {
-  if (savedConfirmation.value) {
-    return {
-      color: savedConfirmation.value.color || props.crewmate.color,
-      shadowColor: savedConfirmation.value.shadowColor || props.crewmate.shadowColor,
-      hat: savedConfirmation.value.hat || props.crewmate.hat,
-      colorName: savedConfirmation.value.colorName || props.crewmate.colorName,
-    }
+  return {
+    color: props.crewmate?.color || savedConfirmation.value?.color || '#06b6d4',
+    shadowColor: props.crewmate?.shadowColor || savedConfirmation.value?.shadowColor || '#0e7490',
+    hat: props.crewmate?.hat || savedConfirmation.value?.hat || 'party-hat',
+    colorName: props.crewmate?.colorName || savedConfirmation.value?.colorName || 'Cian',
   }
-  return props.crewmate
 })
+
+// Sync changes in customizer with saved confirmation
+watch(
+  () => props.crewmate,
+  (newVal) => {
+    if (newVal && savedConfirmation.value) {
+      savedConfirmation.value = {
+        ...savedConfirmation.value,
+        color: newVal.color,
+        shadowColor: newVal.shadowColor,
+        hat: newVal.hat,
+        colorName: newVal.colorName,
+      }
+    }
+  },
+  { deep: true }
+)
 
 const formattedWhatsAppUrl = computed(() => {
   const phone = EVENT_CONFIG.rsvp.whatsappNumber
@@ -93,10 +108,10 @@ const handleSubmit = async () => {
   const payload = {
     id: savedConfirmation.value?.id || ('guest_' + Date.now()),
     name: guestName.value.trim(),
-    color: props.crewmate.color,
-    shadowColor: props.crewmate.shadowColor,
-    hat: props.crewmate.hat,
-    colorName: props.crewmate.colorName,
+    color: activeCrewmate.value.color,
+    shadowColor: activeCrewmate.value.shadowColor,
+    hat: activeCrewmate.value.hat,
+    colorName: activeCrewmate.value.colorName,
     companions: companions.value,
     attendance: attendance.value,
     message: message.value.trim(),
@@ -289,6 +304,24 @@ const cancelEditing = () => {
           >
             Cancelar y ver pase
           </button>
+        </div>
+
+        <!-- Active Suit Badge Preview in Form -->
+        <div class="bg-slate-950/70 border border-slate-700/80 rounded-2xl p-2.5 flex items-center gap-3">
+          <div class="flex-shrink-0">
+            <CrewmateAvatar
+              :color="activeCrewmate.color"
+              :shadow-color="activeCrewmate.shadowColor"
+              :hat="activeCrewmate.hat"
+              :size="52"
+              animation="bounce"
+            />
+          </div>
+          <div class="font-mono text-xs flex-1 min-w-0">
+            <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Tu Traje Espacial Seleccionado:</span>
+            <span class="text-white font-black text-sm">Tripulante {{ activeCrewmate.colorName || 'Cian' }}</span>
+            <span class="text-[10px] text-cyan-300 block">Personalizado en la estación "2. Tu Traje" 🎨</span>
+          </div>
         </div>
 
         <!-- Guest Name -->
