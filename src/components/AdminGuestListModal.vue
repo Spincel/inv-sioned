@@ -111,9 +111,28 @@ const handlePinSubmit = () => {
   }
 }
 
-// Fetch guests from /api/rsvp with localStorage fallback
+// Fetch guests directly from Google Sheets with /api/rsvp fallback
 const fetchGuests = async () => {
   isLoading.value = true
+
+  // 1. Prioridad: Consultar directamente Google Sheets en tiempo real
+  if (EVENT_CONFIG.rsvp?.googleSheetWebhookUrl) {
+    try {
+      const sheetRes = await fetch(EVENT_CONFIG.rsvp.googleSheetWebhookUrl)
+      if (sheetRes.ok) {
+        const sheetData = await sheetRes.json()
+        if (sheetData && Array.isArray(sheetData.guests)) {
+          guests.value = sheetData.guests
+          isLoading.value = false
+          return
+        }
+      }
+    } catch (e) {
+      console.warn('Direct Google Sheet fetch in admin notice:', e)
+    }
+  }
+
+  // 2. Fallback: Consultar endpoint /api/rsvp
   try {
     const res = await fetch('/api/rsvp')
     if (res.ok) {
@@ -124,22 +143,6 @@ const fetchGuests = async () => {
     }
   } catch (err) {
     console.warn('Error fetching /api/rsvp:', err)
-  }
-
-  // Backup sync: check local device confirmation and crew
-  const myRecordRaw = localStorage.getItem('sioned_my_confirmation')
-  if (myRecordRaw) {
-    try {
-      const myRecord = JSON.parse(myRecordRaw)
-      if (myRecord && myRecord.name) {
-        const found = guests.value.find((g) => g.name.toLowerCase() === myRecord.name.toLowerCase())
-        if (!found) {
-          guests.value.push(myRecord)
-        }
-      }
-    } catch (e) {
-      console.error(e)
-    }
   }
 
   isLoading.value = false

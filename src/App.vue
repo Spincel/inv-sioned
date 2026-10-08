@@ -138,78 +138,140 @@ onMounted(async () => {
     }
   }
 
-  // 3. Sync from Vercel /api/rsvp endpoint (reflects Google Sheets in real time)
-  try {
-    const res = await fetch('/api/rsvp')
-    if (res.ok) {
-      const data = await res.json()
-      if (data && Array.isArray(data.guests)) {
-        // Map confirmed guests from current database/sheet
-        const confirmedCrew = data.guests
-          .filter((g) => g.attendance === 'yes')
-          .map((g) => ({
-            id: g.id || 'guest_' + (g.name || '').toLowerCase(),
-            name: g.name,
-            color: g.color || '#06b6d4',
-            shadowColor: g.shadowColor || '#0e7490',
-            hat: g.hat || 'party-hat',
-            dialog: g.message || '¡Listo para la fiesta en Chak Jumping Park! 🤸‍♂️',
-          }))
+  const resolveShadowColor = (colorHex, colorName) => {
+    if (colorName) {
+      const matchByName = EVENT_CONFIG.crewColors.find(
+        (c) => c.name.toLowerCase() === colorName.toLowerCase()
+      )
+      if (matchByName?.dark) return matchByName.dark
+    }
+    if (colorHex) {
+      const matchByHex = EVENT_CONFIG.crewColors.find(
+        (c) => c.hex.toLowerCase() === colorHex.toLowerCase()
+      )
+      if (matchByHex?.dark) return matchByHex.dark
+    }
+    return '#0e7490'
+  }
 
-        // Preserve current user crewmate ("Tú")
-        const userMate = crewMembers.value.find((m) => m.isUser)
-        crewMembers.value = confirmedCrew
+  const syncGuestsFromCloud = async () => {
+    let cloudGuests = null
 
-        if (userMate) {
-          const userIdx = crewMembers.value.findIndex(
-            (m) => m.name.toLowerCase() === userMate.name.toLowerCase()
-          )
-          if (userIdx >= 0) {
-            crewMembers.value[userIdx] = { ...crewMembers.value[userIdx], ...userMate }
-          } else {
-            crewMembers.value.unshift(userMate)
+    // 1. Prioridad: Consultar directamente Google Sheets en tiempo real
+    if (EVENT_CONFIG.rsvp?.googleSheetWebhookUrl) {
+      try {
+        const sheetRes = await fetch(EVENT_CONFIG.rsvp.googleSheetWebhookUrl)
+        if (sheetRes.ok) {
+          const sheetData = await sheetRes.json()
+          if (sheetData && Array.isArray(sheetData.guests)) {
+            cloudGuests = sheetData.guests
           }
         }
-
-        try {
-          localStorage.setItem(STORAGE_CREW_KEY, JSON.stringify(crewMembers.value))
-        } catch (e) {}
+      } catch (err) {
+        console.warn('Direct Google Sheet fetch notice:', err)
       }
     }
-  } catch (e) {
-    // Local fallback
-  }
 
-  // 4. Default starter crewmates if empty: starts at 0
-  if (!crewMembers.value) {
-    crewMembers.value = []
-  }
-
-  // 5. Ensure user's crewmate is always present in the room with their chosen suit
-  if (!myConfirmation.value || myConfirmation.value.attendance === 'yes') {
-    const existingIndex = crewMembers.value.findIndex(
-      (m) => m.isUser || (myConfirmation.value && m.name.toLowerCase() === myConfirmation.value.name.toLowerCase())
-    )
-    const userCrewmate = {
-      id: myConfirmation.value?.id || 'my_user_mate',
-      name: myConfirmation.value?.name || 'Tú',
-      color: guestCrewmate.value.color,
-      shadowColor: guestCrewmate.value.shadowColor,
-      hat: guestCrewmate.value.hat,
-      colorName: guestCrewmate.value.colorName,
-      isUser: true,
-      dialog: myConfirmation.value?.message || '¡Soy yo! Puedes cambiar mi traje en la laptop. 🎨',
+    // 2. Fallback: Consultar endpoint /api/rsvp
+    if (!cloudGuests) {
+      try {
+        const res = await fetch('/api/rsvp')
+        if (res.ok) {
+          const data = await res.json()
+          if (data && Array.isArray(data.guests)) {
+            cloudGuests = data.guests
+          }
+        }
+      } catch (e) {
+        console.warn('API sync fallback notice:', e)
+      }
     }
 
-    if (existingIndex >= 0) {
-      crewMembers.value[existingIndex] = {
-        ...crewMembers.value[existingIndex],
-        ...userCrewmate,
+    if (cloudGuests && Array.isArray(cloudGuests)) {
+      const celebrantName = EVENT_CONFIG.celebrant.name.toLowerCase()
+      const confirmedList = cloudGuests
+        .filter((g) => g.attendance === 'yes' && (g.name || '').trim().toLowerCase() !== celebrantName)
+        .map((g) => {
+          const cHex = g.color || '#06b6d4'
+          return {
+            id: g.id || 'guest_' + (g.name || '').toLowerCase(),
+            name: (g.name || '').trim(),
+            color: cHex,
+            shadowColor: resolveShadowColor(cHex, g.colorName),
+            hat: g.hat || 'party-hat',
+            dialog: g.message && g.message.trim() ? g.message.trim() : '¡Listo para la fiesta en Chak Jumping Park! 🤸‍♂️',
+          }
+        })
+
+      // Marcar al usuario local si su nombre coincide
+      const myName = (myConfirmation.value?.name || '').trim().toLowerCase()
+      let userFound = false
+
+      const mappedCrew = confirmedList.map((mate) => {
+        const isMyUser = myName && mate.name.toLowerCase() === myName
+        if (isMyUser) {
+          userFound = true
+          return {
+            ...mate,
+            isUser: true,
+            color: guestCrewmate.value.color || mate.color,
+            shadowColor: guestCrewmate.value.shadowColor || mate.shadowColor,
+            hat: guestCrewmate.value.hat || mate.hat,
+            colorName: guestCrewmate.value.colorName || mate.colorName,
+            dialog: myConfirmation.value?.message || mate.dialog,
+          }
+        }
+        return mate
+      })
+
+      // Si el usuario no estaba en la lista aún, agregar su avatar
+      if (!userFound && (!myConfirmation.value || myConfirmation.value.attendance === 'yes')) {
+        mappedCrew.unshift({
+          id: myConfirmation.value?.id || 'my_user_mate',
+          name: myConfirmation.value?.name || 'Tú',
+          color: guestCrewmate.value.color,
+          shadowColor: guestCrewmate.value.shadowColor,
+          hat: guestCrewmate.value.hat,
+          colorName: guestCrewmate.value.colorName,
+          isUser: true,
+          dialog: myConfirmation.value?.message || '¡Soy yo! Puedes cambiar mi traje en la laptop. 🎨',
+        })
       }
+
+      crewMembers.value = mappedCrew
+
+      try {
+        localStorage.setItem(STORAGE_CREW_KEY, JSON.stringify(crewMembers.value))
+      } catch (e) {}
     } else {
-      crewMembers.value.unshift(userCrewmate)
+      // Si no hay red, asegurar al menos al usuario en la nave
+      if (!myConfirmation.value || myConfirmation.value.attendance === 'yes') {
+        const hasUser = crewMembers.value.some((m) => m.isUser)
+        if (!hasUser) {
+          crewMembers.value.unshift({
+            id: myConfirmation.value?.id || 'my_user_mate',
+            name: myConfirmation.value?.name || 'Tú',
+            color: guestCrewmate.value.color,
+            shadowColor: guestCrewmate.value.shadowColor,
+            hat: guestCrewmate.value.hat,
+            colorName: guestCrewmate.value.colorName,
+            isUser: true,
+            dialog: myConfirmation.value?.message || '¡Soy yo! Puedes cambiar mi traje en la laptop. 🎨',
+          })
+        }
+      }
     }
   }
+
+  // Ejecutar sincronización inicial en segundo plano
+  syncGuestsFromCloud()
+
+  // Re-sincronizar automáticamente cuando el usuario regresa a la pestaña
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      syncGuestsFromCloud()
+    }
+  })
 
   // 6. Secret Admin Access: URL query (?admin=1, ?admin=sioned) or URL hash (#admin)
   const urlParams = new URLSearchParams(window.location.search)

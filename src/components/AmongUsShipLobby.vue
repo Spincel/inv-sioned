@@ -82,19 +82,30 @@ const syncCrew = () => {
   }
 
   // Pre-configured starting slots for guests (open central room floor)
-  const defaultSlots = [
-    { x: 50, y: 72 }, // Slot for user: front and center!
-    { x: 40, y: 72 },
-    { x: 60, y: 72 },
-    { x: 50, y: 82 },
-    { x: 38, y: 78 },
-    { x: 62, y: 78 },
-    { x: 50, y: 64 },
+  const guestSlots = [
+    { x: 38, y: 70 },
+    { x: 62, y: 70 },
+    { x: 44, y: 80 },
+    { x: 56, y: 80 },
+    { x: 32, y: 78 },
+    { x: 68, y: 78 },
+    { x: 42, y: 62 },
+    { x: 58, y: 62 },
+    { x: 50, y: 84 },
+    { x: 26, y: 72 },
+    { x: 74, y: 72 },
   ]
 
-  const mapped = props.crewmates.map((m, idx) => {
+  let guestSlotIdx = 0
+  const mapped = props.crewmates.map((m) => {
     const existing = localCrew.value.find((c) => (m.id && c.id === m.id) || (m.isUser && c.isUser))
-    const slot = m.isUser ? { x: 50, y: 72 } : defaultSlots[idx % defaultSlots.length]
+    let slot
+    if (m.isUser) {
+      slot = { x: 50, y: 72 } // Slot for user: front and center!
+    } else {
+      slot = guestSlots[guestSlotIdx % guestSlots.length]
+      guestSlotIdx++
+    }
     return {
       ...m,
       x: existing ? existing.x : m.x || slot.x,
