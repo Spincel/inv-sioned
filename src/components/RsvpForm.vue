@@ -138,6 +138,22 @@ const handleSubmit = async () => {
     console.warn('Sync /api/rsvp fallback error:', err)
   }
 
+  // 3. Save directly to Google Sheets in Google Drive (if configured)
+  if (EVENT_CONFIG.rsvp?.googleSheetWebhookUrl) {
+    try {
+      fetch(EVENT_CONFIG.rsvp.googleSheetWebhookUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+        body: JSON.stringify(payload),
+      }).catch((err) => console.warn('Google Sheets client sync error:', err))
+    } catch (err) {
+      console.warn('Google Sheets client fetch error:', err)
+    }
+  }
+
   isSaving.value = false
   isSubmitted.value = true
 

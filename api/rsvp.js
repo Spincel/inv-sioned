@@ -6,48 +6,14 @@ import path from 'path'
 
 const TMP_FILE = path.join('/tmp', 'sioned_rsvp_store.json')
 
-let inMemoryGuests = [
-  {
-    id: 'mateo',
-    name: 'Mateo',
-    attendance: 'yes',
-    companions: '1',
-    message: '¡Listo para brincar en los trampolines! ⚡',
-    color: '#3b82f6',
-    hat: 'sprout',
-    colorName: 'Azul',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'sofia',
-    name: 'Sofía',
-    attendance: 'yes',
-    companions: '2',
-    message: '¡Feliz cumpleaños Sioned! 🌸',
-    color: '#ec4899',
-    hat: 'flower',
-    colorName: 'Rosa',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'lucas',
-    name: 'Lucas',
-    attendance: 'yes',
-    companions: '0',
-    message: '¡Vine por el pastel espacial! 🍰',
-    color: '#eab308',
-    hat: 'balloon',
-    colorName: 'Amarillo',
-    createdAt: new Date().toISOString(),
-  },
-]
+let inMemoryGuests = []
 
 function loadGuests() {
   try {
     if (fs.existsSync(TMP_FILE)) {
       const data = fs.readFileSync(TMP_FILE, 'utf8')
       const parsed = JSON.parse(data)
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         inMemoryGuests = parsed
       }
     }
@@ -216,6 +182,20 @@ export default async function handler(req, res) {
 
       saveGuests(currentGuests)
       const stats = calculateStats(currentGuests)
+
+      // Forward to Google Sheets Webhook in Google Drive if configured
+      const sheetWebhook = process.env.GOOGLE_SHEET_WEBHOOK_URL
+      if (sheetWebhook) {
+        try {
+          fetch(sheetWebhook, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newGuest),
+          }).catch((err) => console.warn('Background Google Sheet sync error:', err))
+        } catch (err) {
+          console.warn('Error calling Google Sheet webhook:', err)
+        }
+      }
 
       return res.status(200).json({
         success: true,

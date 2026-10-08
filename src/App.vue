@@ -50,6 +50,7 @@ const openStation = (stationId) => {
 
 // Admin Panel State
 const isAdminOpen = ref(false)
+const isSecretAdminMode = ref(false)
 
 const openAdminModal = () => {
   sounds.playBeep(750, 0.06)
@@ -127,7 +128,11 @@ onMounted(async () => {
   const savedCrew = localStorage.getItem(STORAGE_CREW_KEY)
   if (savedCrew) {
     try {
-      crewMembers.value = JSON.parse(savedCrew)
+      const parsed = JSON.parse(savedCrew)
+      // Filter out former default mock guests (mateo, sofia, lucas) so list begins fresh
+      crewMembers.value = Array.isArray(parsed)
+        ? parsed.filter((m) => !['mateo', 'sofia', 'lucas'].includes(m.id))
+        : []
     } catch (e) {
       console.error(e)
     }
@@ -158,34 +163,9 @@ onMounted(async () => {
     // Local fallback
   }
 
-  // 4. Default starter crewmates if empty
-  if (!crewMembers.value || crewMembers.value.length === 0) {
-    crewMembers.value = [
-      {
-        id: 'mateo',
-        name: 'Mateo',
-        color: '#3b82f6',
-        shadowColor: '#1e40af',
-        hat: 'sprout',
-        dialog: '¡Listo para brincar en los trampolines! ⚡',
-      },
-      {
-        id: 'sofia',
-        name: 'Sofía',
-        color: '#ec4899',
-        shadowColor: '#be185d',
-        hat: 'flower',
-        dialog: '¡Feliz cumpleaños Sioned! 🌸',
-      },
-      {
-        id: 'lucas',
-        name: 'Lucas',
-        color: '#eab308',
-        shadowColor: '#a16207',
-        hat: 'balloon',
-        dialog: '¡Vine por el pastel espacial! 🍰',
-      },
-    ]
+  // 4. Default starter crewmates if empty: starts at 0
+  if (!crewMembers.value) {
+    crewMembers.value = []
   }
 
   // 5. Ensure user's crewmate is always present in the room with their chosen suit
@@ -214,12 +194,36 @@ onMounted(async () => {
     }
   }
 
-  // 6. Check URL query params for ?admin=1 to open admin panel automatically
+  // 6. Secret Admin Access: URL query (?admin=1, ?admin=sioned) or URL hash (#admin)
   const urlParams = new URLSearchParams(window.location.search)
-  if (urlParams.get('admin') === '1' || urlParams.get('admin') === 'true' || window.location.hash === '#admin') {
+  const hasAdminQuery =
+    urlParams.get('admin') === '1' ||
+    urlParams.get('admin') === 'true' ||
+    urlParams.get('admin') === 'sioned' ||
+    window.location.hash === '#admin'
+
+  if (hasAdminQuery) {
+    isSecretAdminMode.value = true
     showIntro.value = false
     isAdminOpen.value = true
   }
+
+  // Also listen for hash changes (#admin)
+  window.addEventListener('hashchange', () => {
+    if (window.location.hash === '#admin') {
+      isSecretAdminMode.value = true
+      showIntro.value = false
+      isAdminOpen.value = true
+    }
+  })
+
+  // Secret keyboard shortcut: Ctrl+Shift+A opens admin
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'a') {
+      isSecretAdminMode.value = true
+      openAdminModal()
+    }
+  })
 })
 
 // Synchronize user crewmate on the ship lobby with guestCrewmate in real time
@@ -382,11 +386,12 @@ const onAdminGuestsUpdated = (updatedList) => {
 
     <!-- FLOATING CONTROLLER (Intro Replay, Music, SFX & Admin Panel) -->
     <div v-show="!showIntro" class="fixed top-3 right-3 z-40 flex items-center gap-1.5 sm:gap-2">
-      <!-- Admin Guest List Dashboard Button -->
+      <!-- Admin Guest List Dashboard Button (SOLO VISIBLE SI SE INGRESA POR RUTA SECRETA ?admin=1 O #admin) -->
       <button
+        v-if="isSecretAdminMode"
         @click="openAdminModal"
-        class="bg-indigo-950/95 hover:bg-indigo-900 text-indigo-300 hover:text-white border-2 border-indigo-500/70 rounded-full px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-mono font-bold flex items-center gap-1 shadow-lg transition-all active:scale-95 cursor-pointer"
-        title="Panel de Administración (Lista de Invitados y Descarga Excel)"
+        class="bg-indigo-950/95 hover:bg-indigo-900 text-indigo-300 hover:text-white border-2 border-indigo-500/70 rounded-full px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-mono font-bold flex items-center gap-1 shadow-lg transition-all active:scale-95 cursor-pointer animate-pulse"
+        title="Panel de Administración (Modo Organizador)"
       >
         <span>👑 Admin</span>
       </button>

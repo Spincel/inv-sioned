@@ -1,6 +1,6 @@
 <script setup>
 import confetti from 'canvas-confetti'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { EVENT_CONFIG } from '../config/event'
 import { sounds } from '../utils/audio'
 import CrewmateAvatar from './CrewmateAvatar.vue'
@@ -65,11 +65,28 @@ const checkAutoUnlock = () => {
     return
   }
   const urlParams = new URLSearchParams(window.location.search)
-  if (urlParams.get('admin') === '1' || urlParams.get('admin') === 'true' || window.location.hash === '#admin') {
+  if (
+    urlParams.get('admin') === '1' ||
+    urlParams.get('admin') === 'true' ||
+    urlParams.get('admin') === 'sioned' ||
+    window.location.hash === '#admin'
+  ) {
     isUnlocked.value = true
     sessionStorage.setItem('sioned_admin_auth', '1')
   }
 }
+
+watch(
+  () => props.isOpen,
+  (val) => {
+    if (val) {
+      checkAutoUnlock()
+      if (isUnlocked.value) {
+        fetchGuests()
+      }
+    }
+  }
+)
 
 const unlockDirect = () => {
   isUnlocked.value = true
@@ -191,6 +208,20 @@ const handleSaveManualGuest = async () => {
     })
   } catch (err) {
     console.warn(err)
+  }
+
+  // Forward to Google Sheets Webhook if configured
+  if (EVENT_CONFIG.rsvp?.googleSheetWebhookUrl) {
+    try {
+      fetch(EVENT_CONFIG.rsvp.googleSheetWebhookUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload),
+      }).catch((e) => console.warn('Google Sheets manual sync error:', e))
+    } catch (err) {
+      console.warn(err)
+    }
   }
 
   showManualModal.value = false
