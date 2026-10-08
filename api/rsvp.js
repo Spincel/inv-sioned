@@ -184,12 +184,15 @@ export default async function handler(req, res) {
       const stats = calculateStats(currentGuests)
 
       // Forward to Google Sheets Webhook in Google Drive if configured
-      const sheetWebhook = process.env.GOOGLE_SHEET_WEBHOOK_URL
+      const sheetWebhook =
+        process.env.GOOGLE_SHEET_WEBHOOK_URL ||
+        'https://script.google.com/macros/s/AKfycbxD_noQ2gvUVoIvtoujuUhNeL9oBxQgFOeJMCFTpQIfvvTNWB9sMuiYoCCSVuNScc8Atw/exec'
       if (sheetWebhook) {
         try {
           fetch(sheetWebhook, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            redirect: 'follow',
+            headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(newGuest),
           }).catch((err) => console.warn('Background Google Sheet sync error:', err))
         } catch (err) {

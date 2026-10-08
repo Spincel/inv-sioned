@@ -41,7 +41,7 @@ export const EVENT_CONFIG = {
     whatsappNumber: '523110000000', // Modifica este número con el teléfono real del organizador
     deadline: 'Por favor confirma antes del 20 de Octubre',
     // Webhook de Google Sheets (Google Apps Script) para registrar respuestas en Google Drive en tiempo real:
-    googleSheetWebhookUrl: '',
+    googleSheetWebhookUrl: 'https://script.google.com/macros/s/AKfycbxD_noQ2gvUVoIvtoujuUhNeL9oBxQgFOeJMCFTpQIfvvTNWB9sMuiYoCCSVuNScc8Atw/exec',
   },
   crewColors: [
     { name: 'Rojo', hex: '#ef4444', dark: '#991b1b', text: 'Impostor Sus' },
