@@ -138,25 +138,42 @@ onMounted(async () => {
     }
   }
 
-  // 3. Sync from Vercel /api/rsvp endpoint
+  // 3. Sync from Vercel /api/rsvp endpoint (reflects Google Sheets in real time)
   try {
     const res = await fetch('/api/rsvp')
     if (res.ok) {
       const data = await res.json()
-      if (data && data.guests && data.guests.length > 0) {
-        const existingNames = new Set(crewMembers.value.map((c) => c.name.toLowerCase()))
-        data.guests.forEach((g) => {
-          if (!existingNames.has(g.name.toLowerCase()) && g.attendance === 'yes') {
-            crewMembers.value.push({
-              id: g.id || 'guest_' + Date.now(),
-              name: g.name,
-              color: g.color || '#06b6d4',
-              shadowColor: g.shadowColor || '#0e7490',
-              hat: g.hat || 'party-hat',
-              dialog: g.message || '¡Listo para la fiesta en Chak Jumping Park! 🤸‍♂️',
-            })
+      if (data && Array.isArray(data.guests)) {
+        // Map confirmed guests from current database/sheet
+        const confirmedCrew = data.guests
+          .filter((g) => g.attendance === 'yes')
+          .map((g) => ({
+            id: g.id || 'guest_' + (g.name || '').toLowerCase(),
+            name: g.name,
+            color: g.color || '#06b6d4',
+            shadowColor: g.shadowColor || '#0e7490',
+            hat: g.hat || 'party-hat',
+            dialog: g.message || '¡Listo para la fiesta en Chak Jumping Park! 🤸‍♂️',
+          }))
+
+        // Preserve current user crewmate ("Tú")
+        const userMate = crewMembers.value.find((m) => m.isUser)
+        crewMembers.value = confirmedCrew
+
+        if (userMate) {
+          const userIdx = crewMembers.value.findIndex(
+            (m) => m.name.toLowerCase() === userMate.name.toLowerCase()
+          )
+          if (userIdx >= 0) {
+            crewMembers.value[userIdx] = { ...crewMembers.value[userIdx], ...userMate }
+          } else {
+            crewMembers.value.unshift(userMate)
           }
-        })
+        }
+
+        try {
+          localStorage.setItem(STORAGE_CREW_KEY, JSON.stringify(crewMembers.value))
+        } catch (e) {}
       }
     }
   } catch (e) {

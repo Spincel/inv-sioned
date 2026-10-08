@@ -213,8 +213,37 @@ export default async function handler(req, res) {
     }
   }
 
-  // GET: Return guests list and stats
+  // GET: Return guests list and stats (syncs live with Google Sheet master if configured)
   if (req.method === 'GET') {
+    const sheetWebhook =
+      process.env.GOOGLE_SHEET_WEBHOOK_URL ||
+      'https://script.google.com/macros/s/AKfycbxD_noQ2gvUVoIvtoujuUhNeL9oBxQgFOeJMCFTpQIfvvTNWB9sMuiYoCCSVuNScc8Atw/exec'
+
+    if (sheetWebhook) {
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 3500)
+        const sheetRes = await fetch(sheetWebhook, {
+          redirect: 'follow',
+          signal: controller.signal,
+        })
+        clearTimeout(timeoutId)
+
+        if (sheetRes.ok) {
+          const sheetData = await sheetRes.json()
+          if (sheetData && Array.isArray(sheetData.guests)) {
+            // Google Sheets is the master source of truth:
+            // if a row was removed in Google Sheets, it is removed here too
+            currentGuests = sheetData.guests
+            saveGuests(currentGuests)
+          }
+        }
+      } catch (err) {
+        // Fallback gracefully to existing cache if Google is offline or slow
+        console.warn('Google Sheet live sync notice:', err.message)
+      }
+    }
+
     const stats = calculateStats(currentGuests)
     return res.status(200).json({
       success: true,
