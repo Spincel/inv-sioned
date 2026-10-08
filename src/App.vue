@@ -369,6 +369,27 @@ const handleCrewConfirm = (data) => {
     console.warn(e)
   }
 
+  // 1. Sync in background to /api/rsvp (Vercel)
+  try {
+    fetch('/api/rsvp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).catch((e) => console.warn(e))
+  } catch (e) {}
+
+  // 2. Sync directly to Google Sheets (Google Drive Apps Script)
+  if (EVENT_CONFIG.rsvp?.googleSheetWebhookUrl) {
+    try {
+      fetch(EVENT_CONFIG.rsvp.googleSheetWebhookUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(data),
+      }).catch((e) => console.warn(e))
+    } catch (e) {}
+  }
+
   if (data.attendance === 'yes') {
     if (data.color) guestCrewmate.value.color = data.color
     if (data.shadowColor) guestCrewmate.value.shadowColor = data.shadowColor
@@ -440,9 +461,11 @@ const onAdminGuestsUpdated = (updatedList) => {
     <!-- Starfield Dynamic Canvas Background -->
     <StarfieldBackground />
 
-    <!-- INTRO CINEMATIC (Step 1: ¿Estás listo? -> Step 2: Botón rojo con sirena -> Step 3: Reunión fiesta de Sioned ingresar) -->
+    <!-- INTRO CINEMATIC (5 Escenas: Alarma -> Misión -> Lugar -> Fecha/Ropa -> Pase de abordaje -> Lanzamiento a la nave) -->
     <AmongUsIntro
       v-if="showIntro"
+      :confirmed-data="myConfirmation"
+      @confirm-rsvp="handleCrewConfirm"
       @complete="onIntroComplete"
     />
 
