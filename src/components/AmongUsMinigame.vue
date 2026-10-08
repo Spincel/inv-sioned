@@ -1,6 +1,6 @@
 <script setup>
 import confetti from 'canvas-confetti'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { EVENT_CONFIG } from '../config/event'
 import { sounds } from '../utils/audio'
 import CrewmateAvatar from './CrewmateAvatar.vue'
@@ -32,52 +32,230 @@ const isAllCompleted = computed(() => {
 // TAREA 1: ALINEAR EL ESCUDO (CABLES / MOTORES)
 // ==========================================
 const wireColors = [
-  { id: 'red', name: 'Rojo', color: '#ef4444', border: '#991b1b', glow: 'rgba(239,68,68,0.8)' },
-  { id: 'blue', name: 'Azul', color: '#3b82f6', border: '#1e40af', glow: 'rgba(59,130,246,0.8)' },
-  { id: 'yellow', name: 'Amarillo', color: '#eab308', border: '#854d0e', glow: 'rgba(234,179,8,0.8)' },
-  { id: 'pink', name: 'Rosa', color: '#ec4899', border: '#9d174d', glow: 'rgba(236,72,153,0.8)' },
+  { id: 'red', name: 'Rojo', color: '#ef4444', border: '#991b1b', glow: 'rgba(239,68,68,0.85)' },
+  { id: 'blue', name: 'Azul', color: '#3b82f6', border: '#1e40af', glow: 'rgba(59,130,246,0.85)' },
+  { id: 'yellow', name: 'Amarillo', color: '#eab308', border: '#854d0e', glow: 'rgba(234,179,8,0.85)' },
+  { id: 'pink', name: 'Rosa', color: '#ec4899', border: '#9d174d', glow: 'rgba(236,72,153,0.85)' },
 ]
 
 const leftWires = ref([...wireColors])
 const rightWires = ref([])
 const connections = ref({}) // { red: 'red', ... }
 const activeWire = ref(null) // currently selected wire id from left
+const draggingWire = ref(null)
+const pointerPos = ref({ x: 0, y: 0 })
+const sparks = ref([])
+
+const panelRef = ref(null)
+const leftSocketRefs = ref([])
+const rightSocketRefs = ref([])
+const leftCoords = ref({})
+const rightCoords = ref({})
+
+const getWire = (id) => wireColors.find((w) => w.id === id)
 
 const initWires = () => {
   connections.value = {}
   activeWire.value = null
+  draggingWire.value = null
+  sparks.value = []
   // Shuffle right sockets
   const shuffled = [...wireColors].sort(() => Math.random() - 0.5)
   rightWires.value = shuffled
+  nextTick(() => {
+    updateCoords()
+  })
 }
 
-const selectLeftWire = (wireId) => {
+const updateCoords = () => {
+  if (!panelRef.value) return
+  const panelRect = panelRef.value.getBoundingClientRect()
+  if (panelRect.width === 0 || panelRect.height === 0) return
+
+  leftWires.value.forEach((w, idx) => {
+    const el = leftSocketRefs.value[idx]
+    if (el) {
+      const rect = el.getBoundingClientRect()
+      leftCoords.value[w.id] = {
+        x: rect.right - panelRect.left - 2,
+        y: rect.top + rect.height / 2 - panelRect.top,
+      }
+    }
+  })
+
+  rightWires.value.forEach((w, idx) => {
+    const el = rightSocketRefs.value[idx]
+    if (el) {
+      const rect = el.getBoundingClientRect()
+      rightCoords.value[w.id] = {
+        x: rect.left - panelRect.left + 2,
+        y: rect.top + rect.height / 2 - panelRect.top,
+      }
+    }
+  })
+}
+
+const getCablePath = (p1, p2) => {
+  if (!p1 || !p2) return ''
+  const dx = Math.max(35, Math.abs(p2.x - p1.x) * 0.45)
+  return `M ${p1.x} ${p1.y} C ${p1.x + dx} ${p1.y}, ${p2.x - dx} ${p2.y}, ${p2.x} ${p2.y}`
+}
+
+const triggerSparks = (x, y, color) => {
+  const newSparks = []
+  for (let i = 0; i < 14; i++) {
+    const angle = (Math.PI * 2 * i) / 14 + (Math.random() - 0.5) * 0.4
+    const dist = 20 + Math.random() * 32
+    newSparks.push({
+      id: Date.now() + '_' + i,
+      x,
+      y,
+      vx: Math.cos(angle) * dist,
+      vy: Math.sin(angle) * dist,
+      color: color || '#facc15',
+    })
+  }
+  sparks.value = [...sparks.value, ...newSparks]
+  setTimeout(() => {
+    sparks.value = sparks.value.filter((s) => !newSparks.some((ns) => ns.id === s.id))
+  }, 450)
+}
+
+const connectSuccess = (sourceId, targetId) => {
+  connections.value[sourceId] = targetId
+  activeWire.value = null
+  sounds.playSpark()
+
+  const pt = rightCoords.value[targetId]
+  if (pt) {
+    const wireObj = getWire(targetId)
+    triggerSparks(pt.x, pt.y, wireObj?.color || '#facc15')
+  }
+
+  if (Object.keys(connections.value).length === 4) {
+    completedTasks.value.wires = true
+    sounds.playTaskComplete()
+    confetti({
+      particleCount: 80,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#ef4444', '#3b82f6', '#eab308', '#ec4899', '#22c55e'],
+    })
+  }
+}
+
+const handlePointerDown = (wireId, e) => {
   if (completedTasks.value.wires) return
-  sounds.playBeep(450, 0.08)
+  e.preventDefault()
+  updateCoords()
+
+  if (connections.value[wireId]) {
+    delete connections.value[wireId]
+  }
+
+  draggingWire.value = wireId
   activeWire.value = wireId
+  sounds.playWireGrab()
+
+  const panelRect = panelRef.value.getBoundingClientRect()
+  pointerPos.value = {
+    x: e.clientX - panelRect.left,
+    y: e.clientY - panelRect.top,
+  }
+
+  window.addEventListener('pointermove', onPointerMove)
+  window.addEventListener('pointerup', onPointerUp)
+  window.addEventListener('pointercancel', onPointerUp)
 }
 
-const connectToRight = (targetId) => {
-  if (!activeWire.value || completedTasks.value.wires) return
+const onPointerMove = (e) => {
+  if (!draggingWire.value || !panelRef.value) return
+  const panelRect = panelRef.value.getBoundingClientRect()
+  pointerPos.value = {
+    x: Math.max(10, Math.min(panelRect.width - 10, e.clientX - panelRect.left)),
+    y: Math.max(10, Math.min(panelRect.height - 10, e.clientY - panelRect.top)),
+  }
+}
 
-  if (activeWire.value === targetId) {
-    // Correct wire!
-    connections.value[activeWire.value] = targetId
-    sounds.playSpark()
-    activeWire.value = null
+const onPointerUp = (e) => {
+  if (!draggingWire.value) return
 
-    // Check if all connected
-    if (Object.keys(connections.value).length === 4) {
-      completedTasks.value.wires = true
-      sounds.playTaskComplete()
-      confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } })
+  const droppedSocket = findRightSocketAt(e.clientX, e.clientY)
+  if (droppedSocket) {
+    if (droppedSocket.id === draggingWire.value) {
+      connectSuccess(draggingWire.value, droppedSocket.id)
+    } else {
+      sounds.playCardError()
+      activeWire.value = null
     }
   } else {
-    // Wrong wire
+    const startPt = leftCoords.value[draggingWire.value]
+    if (startPt) {
+      const dist = Math.hypot(pointerPos.value.x - startPt.x, pointerPos.value.y - startPt.y)
+      if (dist > 35) {
+        activeWire.value = null
+      }
+    }
+  }
+
+  draggingWire.value = null
+  window.removeEventListener('pointermove', onPointerMove)
+  window.removeEventListener('pointerup', onPointerUp)
+  window.removeEventListener('pointercancel', onPointerUp)
+}
+
+const findRightSocketAt = (clientX, clientY) => {
+  for (let i = 0; i < rightWires.value.length; i++) {
+    const el = rightSocketRefs.value[i]
+    if (el) {
+      const rect = el.getBoundingClientRect()
+      if (
+        clientX >= rect.left - 25 &&
+        clientX <= rect.right + 25 &&
+        clientY >= rect.top - 20 &&
+        clientY <= rect.bottom + 20
+      ) {
+        return rightWires.value[i]
+      }
+    }
+  }
+  return null
+}
+
+const handleLeftClick = (wireId) => {
+  if (completedTasks.value.wires) return
+  updateCoords()
+
+  if (connections.value[wireId]) {
+    delete connections.value[wireId]
+    sounds.playWireGrab()
+    activeWire.value = null
+    return
+  }
+
+  if (activeWire.value === wireId) {
+    activeWire.value = null
+  } else {
+    activeWire.value = wireId
+    sounds.playWireGrab()
+  }
+}
+
+const handleRightClick = (targetId) => {
+  if (!activeWire.value || completedTasks.value.wires) return
+  if (activeWire.value === targetId) {
+    connectSuccess(activeWire.value, targetId)
+  } else {
     sounds.playCardError()
     activeWire.value = null
   }
 }
+
+watch(activeTab, (tab) => {
+  if (tab === 'wires') {
+    nextTick(() => updateCoords())
+  }
+})
 
 // ==========================================
 // TAREA 2: DESCARGA DE DATOS (BARRA & OBSTÁCULOS)
@@ -382,12 +560,30 @@ const generateWallpaper = () => {
   }, 1000)
 }
 
+let resizeObs = null
+const handleWindowResize = () => {
+  updateCoords()
+}
+
 onMounted(() => {
   initWires()
+  window.addEventListener('resize', handleWindowResize)
+  nextTick(() => {
+    updateCoords()
+    if (window.ResizeObserver && panelRef.value) {
+      resizeObs = new ResizeObserver(() => updateCoords())
+      resizeObs.observe(panelRef.value)
+    }
+  })
 })
 
 onUnmounted(() => {
   stopDownloading()
+  window.removeEventListener('resize', handleWindowResize)
+  window.removeEventListener('pointermove', onPointerMove)
+  window.removeEventListener('pointerup', onPointerUp)
+  window.removeEventListener('pointercancel', onPointerUp)
+  if (resizeObs) resizeObs.disconnect()
 })
 </script>
 
@@ -507,78 +703,299 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <!-- Wiring Terminal Box -->
-        <div class="relative bg-slate-900 border-4 border-slate-700 rounded-3xl p-3 sm:p-5 shadow-2xl overflow-hidden">
-          <!-- Corner bolts -->
-          <span class="absolute top-2 left-2 text-slate-600 text-xs">⚙️</span>
-          <span class="absolute top-2 right-2 text-slate-600 text-xs">⚙️</span>
-          <span class="absolute bottom-2 left-2 text-slate-600 text-xs">⚙️</span>
-          <span class="absolute bottom-2 right-2 text-slate-600 text-xs">⚙️</span>
+        <!-- Wiring Terminal Box (Authentic Among Us Electrical Box) -->
+        <div
+          ref="panelRef"
+          class="relative bg-[#0d121f] border-4 border-slate-700 rounded-3xl p-3 sm:p-5 shadow-[inset_0_0_40px_rgba(0,0,0,0.8),0_10px_30px_rgba(0,0,0,0.6)] overflow-hidden select-none touch-none"
+        >
+          <!-- Industrial panel hazard stripes on top -->
+          <div class="absolute top-0 left-0 right-0 h-1.5 bg-[repeating-linear-gradient(45deg,#eab308,#eab308_10px,#000_10px,#000_20px)] opacity-60" />
 
-          <!-- Left & Right Wire Sockets -->
-          <div class="grid grid-cols-2 gap-4 sm:gap-10 my-2">
-            <!-- Left Sockets -->
-            <div class="space-y-3">
+          <!-- Corner industrial screws with metallic gradients -->
+          <div class="absolute top-2.5 left-2.5 w-3 h-3 rounded-full bg-slate-600 border border-slate-400 shadow-inner flex items-center justify-center text-[7px] text-slate-900 font-bold">✕</div>
+          <div class="absolute top-2.5 right-2.5 w-3 h-3 rounded-full bg-slate-600 border border-slate-400 shadow-inner flex items-center justify-center text-[7px] text-slate-900 font-bold">✕</div>
+          <div class="absolute bottom-2.5 left-2.5 w-3 h-3 rounded-full bg-slate-600 border border-slate-400 shadow-inner flex items-center justify-center text-[7px] text-slate-900 font-bold">✕</div>
+          <div class="absolute bottom-2.5 right-2.5 w-3 h-3 rounded-full bg-slate-600 border border-slate-400 shadow-inner flex items-center justify-center text-[7px] text-slate-900 font-bold">✕</div>
+
+          <!-- Stencil text watermark on metal backplate -->
+          <div class="absolute top-3 left-1/2 -translate-x-1/2 text-[9px] sm:text-[10px] font-mono font-black text-slate-600/60 uppercase tracking-widest pointer-events-none whitespace-nowrap">
+            ⚡ PANEL DE MOTORES 120V • CAKE PROPULSION 🎂
+          </div>
+
+          <!-- ============================================== -->
+          <!-- SVG INTERACTIVE CABLES & ELECTRICITY LAYER    -->
+          <!-- ============================================== -->
+          <svg class="absolute inset-0 w-full h-full pointer-events-none z-10 overflow-visible">
+            <defs>
+              <filter id="wire-glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            <!-- 1. Connected Wires -->
+            <g v-for="(targetId, sourceId) in connections" :key="'conn_' + sourceId">
+              <template v-if="leftCoords[sourceId] && rightCoords[targetId]">
+                <!-- Outer Rubber Outline (Black) -->
+                <path
+                  :d="getCablePath(leftCoords[sourceId], rightCoords[targetId])"
+                  stroke="#080c14"
+                  stroke-width="15"
+                  stroke-linecap="round"
+                  fill="none"
+                />
+                <!-- Bevel Shadow -->
+                <path
+                  :d="getCablePath(leftCoords[sourceId], rightCoords[targetId])"
+                  :stroke="getWire(sourceId)?.border || '#333'"
+                  stroke-width="11"
+                  stroke-linecap="round"
+                  fill="none"
+                />
+                <!-- Main Colored Wire Core -->
+                <path
+                  :d="getCablePath(leftCoords[sourceId], rightCoords[targetId])"
+                  :stroke="getWire(sourceId)?.color || '#fff'"
+                  stroke-width="7.5"
+                  stroke-linecap="round"
+                  fill="none"
+                  filter="url(#wire-glow)"
+                />
+                <!-- Specular Highlight Shine -->
+                <path
+                  :d="getCablePath(leftCoords[sourceId], rightCoords[targetId])"
+                  stroke="rgba(255, 255, 255, 0.55)"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  fill="none"
+                />
+                <!-- Animated Electricity Flow Pulse -->
+                <path
+                  :d="getCablePath(leftCoords[sourceId], rightCoords[targetId])"
+                  stroke="#ffffff"
+                  stroke-width="2.5"
+                  stroke-dasharray="8 16"
+                  stroke-linecap="round"
+                  fill="none"
+                  class="animate-wire-electricity"
+                />
+                <!-- Terminal socket plug collar -->
+                <circle
+                  :cx="rightCoords[targetId].x"
+                  :cy="rightCoords[targetId].y"
+                  r="5"
+                  :fill="getWire(sourceId)?.color"
+                  stroke="#080c14"
+                  stroke-width="2"
+                />
+              </template>
+            </g>
+
+            <!-- 2. Active Dragging Cable -->
+            <g v-if="draggingWire && leftCoords[draggingWire]">
+              <!-- Outer Rubber Outline -->
+              <path
+                :d="getCablePath(leftCoords[draggingWire], pointerPos)"
+                stroke="#080c14"
+                stroke-width="15"
+                stroke-linecap="round"
+                fill="none"
+              />
+              <!-- Bevel -->
+              <path
+                :d="getCablePath(leftCoords[draggingWire], pointerPos)"
+                :stroke="getWire(draggingWire)?.border || '#333'"
+                stroke-width="11"
+                stroke-linecap="round"
+                fill="none"
+              />
+              <!-- Colored Core -->
+              <path
+                :d="getCablePath(leftCoords[draggingWire], pointerPos)"
+                :stroke="getWire(draggingWire)?.color || '#fff'"
+                stroke-width="7.5"
+                stroke-linecap="round"
+                fill="none"
+                filter="url(#wire-glow)"
+              />
+              <!-- Highlight Shine -->
+              <path
+                :d="getCablePath(leftCoords[draggingWire], pointerPos)"
+                stroke="rgba(255, 255, 255, 0.65)"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                fill="none"
+              />
+              <!-- Metallic Plug Head following pointer -->
+              <g :transform="`translate(${pointerPos.x}, ${pointerPos.y})`">
+                <rect x="-8" y="-6" width="16" height="12" rx="3" fill="#64748b" stroke="#080c14" stroke-width="2" />
+                <rect x="5" y="-3" width="7" height="6" rx="1" fill="#facc15" stroke="#080c14" stroke-width="1.5" />
+                <circle cx="9" cy="0" r="3.5" fill="#fef08a" class="animate-ping" opacity="0.9" />
+              </g>
+            </g>
+
+            <!-- 3. Tap Mode: Wire Ready / Hovering -->
+            <g v-else-if="activeWire && !connections[activeWire] && leftCoords[activeWire]">
+              <path
+                :d="getCablePath(leftCoords[activeWire], { x: leftCoords[activeWire].x + 65, y: leftCoords[activeWire].y })"
+                stroke="#080c14"
+                stroke-width="15"
+                stroke-linecap="round"
+                fill="none"
+              />
+              <path
+                :d="getCablePath(leftCoords[activeWire], { x: leftCoords[activeWire].x + 65, y: leftCoords[activeWire].y })"
+                :stroke="getWire(activeWire)?.color || '#fff'"
+                stroke-width="7.5"
+                stroke-linecap="round"
+                fill="none"
+                filter="url(#wire-glow)"
+              />
+              <g :transform="`translate(${leftCoords[activeWire].x + 65}, ${leftCoords[activeWire].y})`">
+                <rect x="-7" y="-5" width="14" height="10" rx="2.5" fill="#64748b" stroke="#080c14" stroke-width="1.5" />
+                <rect x="4" y="-2.5" width="6" height="5" rx="1" fill="#facc15" stroke="#080c14" stroke-width="1.2" />
+                <circle cx="7" cy="0" r="3" fill="#fef08a" class="animate-ping" opacity="0.9" />
+              </g>
+            </g>
+          </svg>
+
+          <!-- 4. Contact Electric Sparks Burst -->
+          <div
+            v-for="s in sparks"
+            :key="s.id"
+            class="absolute w-2.5 h-2.5 rounded-full pointer-events-none z-30 animate-spark-burst"
+            :style="{
+              left: `${s.x}px`,
+              top: `${s.y}px`,
+              backgroundColor: s.color,
+              boxShadow: `0 0 10px ${s.color}`,
+              '--tx': `${s.vx}px`,
+              '--ty': `${s.vy}px`,
+            }"
+          />
+
+          <!-- ============================================== -->
+          <!-- TERMINAL SOCKET COLUMNS (LEFT & RIGHT)         -->
+          <!-- ============================================== -->
+          <div class="relative z-20 grid grid-cols-2 gap-4 sm:gap-12 my-3 min-h-[310px] sm:min-h-[350px] items-stretch">
+            <!-- LEFT WIRE DOCKS -->
+            <div class="flex flex-col justify-around space-y-2">
               <div
-                v-for="wire in leftWires"
+                v-for="(wire, idx) in leftWires"
                 :key="wire.id"
-                @click="selectLeftWire(wire.id)"
-                class="flex items-center gap-2 cursor-pointer transition-all active:scale-95 group"
+                @pointerdown="handlePointerDown(wire.id, $event)"
+                @click="handleLeftClick(wire.id)"
+                class="flex items-center gap-1.5 sm:gap-2.5 cursor-grab active:cursor-grabbing group transition-transform"
+                :class="{
+                  'scale-105': activeWire === wire.id,
+                }"
               >
-                <!-- Wire Head Button with Neon glow -->
+                <!-- Wire Box / Button -->
                 <button
                   type="button"
-                  class="w-14 sm:w-20 h-9 sm:h-11 rounded-r-2xl border-3 flex items-center justify-center font-mono font-black text-[10px] sm:text-xs text-white uppercase shadow-md transition-all"
+                  class="w-16 sm:w-24 h-10 sm:h-12 rounded-r-2xl border-3 flex items-center justify-between px-2 sm:px-3 font-mono font-black text-[10px] sm:text-xs text-white uppercase shadow-lg transition-all active:scale-95"
                   :style="{
                     backgroundColor: wire.color,
                     borderColor: wire.border,
-                    boxShadow: activeWire === wire.id ? `0 0 20px ${wire.glow}` : 'none',
-                    transform: activeWire === wire.id ? 'translateX(6px)' : 'none',
+                    boxShadow: activeWire === wire.id ? `0 0 25px ${wire.glow}` : '0 4px 10px rgba(0,0,0,0.5)',
+                  }"
+                  :title="'Toca o arrastra el cable ' + wire.name"
+                >
+                  <span class="truncate">{{ wire.name }}</span>
+                  <span v-if="connections[wire.id]" class="text-xs">⚡</span>
+                  <span v-else-if="activeWire === wire.id" class="text-xs animate-bounce">👉</span>
+                  <span v-else class="text-[10px] opacity-75">🔌</span>
+                </button>
+
+                <!-- Plug Anchor Head (Measured for cable origin) -->
+                <div
+                  :ref="(el) => (leftSocketRefs[idx] = el)"
+                  class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-900 border-2 flex items-center justify-center transition-all shadow-md flex-shrink-0"
+                  :style="{
+                    borderColor: activeWire === wire.id ? wire.color : '#64748b',
+                    boxShadow: activeWire === wire.id ? `0 0 15px ${wire.glow}` : 'none',
                   }"
                 >
-                  {{ wire.name }}
-                </button>
-                <!-- Terminal socket plug -->
-                <div
-                  class="w-3.5 h-3.5 rounded-full border-2 transition-colors"
-                  :class="connections[wire.id] ? 'bg-emerald-400 border-white shadow-[0_0_8px_#34d399]' : 'bg-slate-800 border-slate-600'"
-                />
+                  <!-- Golden tip center -->
+                  <div
+                    class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-transform"
+                    :class="connections[wire.id] ? 'bg-emerald-400 scale-110 shadow-[0_0_8px_#34d399]' : 'bg-amber-400'"
+                  />
+                </div>
               </div>
             </div>
 
-            <!-- Right Destination Sockets -->
-            <div class="space-y-3 flex flex-col items-end">
+            <!-- RIGHT RECEPTACLE SOCKETS -->
+            <div class="flex flex-col justify-around space-y-2 items-end">
               <div
-                v-for="wire in rightWires"
+                v-for="(wire, idx) in rightWires"
                 :key="wire.id"
-                @click="connectToRight(wire.id)"
-                class="flex items-center gap-2 cursor-pointer transition-all active:scale-95 group flex-row-reverse"
+                @click="handleRightClick(wire.id)"
+                class="flex items-center gap-1.5 sm:gap-2.5 cursor-pointer flex-row-reverse group transition-transform"
+                :class="{
+                  'scale-105': activeWire === wire.id,
+                }"
               >
-                <!-- Right socket button -->
+                <!-- Right Socket Button -->
                 <button
                   type="button"
-                  class="w-14 sm:w-20 h-9 sm:h-11 rounded-l-2xl border-3 flex items-center justify-center font-mono font-black text-[10px] sm:text-xs text-white uppercase shadow-md transition-all"
+                  class="w-16 sm:w-24 h-10 sm:h-12 rounded-l-2xl border-3 flex items-center justify-between px-2 sm:px-3 font-mono font-black text-[10px] sm:text-xs text-white uppercase shadow-lg transition-all active:scale-95 flex-row-reverse"
                   :style="{
                     backgroundColor: wire.color,
                     borderColor: wire.border,
-                    boxShadow: Object.values(connections).includes(wire.id) ? `0 0 15px ${wire.glow}` : 'none',
+                    boxShadow: Object.values(connections).includes(wire.id) ? `0 0 20px ${wire.glow}` : '0 4px 10px rgba(0,0,0,0.5)',
+                  }"
+                  :title="'Conecta aquí el cable ' + wire.name"
+                >
+                  <span class="truncate">{{ wire.name }}</span>
+                  <span v-if="Object.values(connections).includes(wire.id)" class="text-xs">✅</span>
+                  <span v-else-if="activeWire === wire.id" class="text-xs animate-ping">🎯</span>
+                  <span v-else class="text-[10px] opacity-75">🧲</span>
+                </button>
+
+                <!-- Socket Receptacle Hole (Measured for cable target) -->
+                <div
+                  :ref="(el) => (rightSocketRefs[idx] = el)"
+                  class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-950 border-2 flex items-center justify-center transition-all shadow-inner flex-shrink-0"
+                  :style="{
+                    borderColor: Object.values(connections).includes(wire.id) ? '#34d399' : (activeWire === wire.id ? wire.color : '#475569'),
                   }"
                 >
-                  {{ wire.name }}
-                </button>
-                <!-- Terminal socket plug -->
-                <div
-                  class="w-3.5 h-3.5 rounded-full border-2 transition-colors"
-                  :class="Object.values(connections).includes(wire.id) ? 'bg-emerald-400 border-white shadow-[0_0_8px_#34d399]' : 'bg-slate-800 border-slate-600'"
-                />
+                  <!-- Socket Contact Slot -->
+                  <div
+                    class="w-3 h-1.5 rounded-sm transition-colors"
+                    :class="Object.values(connections).includes(wire.id) ? 'bg-amber-400' : 'bg-black'"
+                  />
+                </div>
+
+                <!-- LED Status Indicator Light (Among Us authentic socket LED) -->
+                <div class="flex flex-col items-center mr-0.5">
+                  <div
+                    class="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2 transition-all flex items-center justify-center"
+                    :class="
+                      Object.values(connections).includes(wire.id)
+                        ? 'bg-emerald-400 border-white shadow-[0_0_14px_#10b981] animate-pulse'
+                        : 'bg-red-950/80 border-red-800/80'
+                    "
+                    :title="Object.values(connections).includes(wire.id) ? 'Conectado ✅' : 'Esperando conexión...'"
+                  >
+                    <div
+                      class="w-1 h-1 rounded-full"
+                      :class="Object.values(connections).includes(wire.id) ? 'bg-white' : 'bg-red-500/50'"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Task Completed Banner -->
           <div v-if="completedTasks.wires" class="mt-4 pt-3 border-t-2 border-emerald-500/40 text-center animate-fade-in space-y-2">
-            <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 text-emerald-300 font-mono text-xs font-black rounded-full border border-emerald-400">
-              <span>🎂 MOTORES DEL PASTEL ENCENDIDOS (+33%)</span>
+            <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 text-emerald-300 font-mono text-xs font-black rounded-full border border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+              <span>⚡ ¡MOTORES DEL PASTEL ENCENDIDOS Y ENERGIZADOS! 🎂🚀⚡</span>
             </div>
             <div>
               <button
@@ -859,3 +1276,33 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+@keyframes spark-burst {
+  0% {
+    transform: translate(0, 0) scale(1.6);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx), var(--ty)) scale(0.1);
+    opacity: 0;
+  }
+}
+
+.animate-spark-burst {
+  animation: spark-burst 0.45s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes electricity-flow {
+  0% {
+    stroke-dashoffset: 48;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-wire-electricity {
+  animation: electricity-flow 0.8s linear infinite;
+}
+</style>

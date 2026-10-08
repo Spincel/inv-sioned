@@ -29,8 +29,105 @@ class SoundEngine {
     return this.muted
   }
 
-  // Emergency Button Siren
+  // Mechanical Heavy Button Slam Impact
+  playButtonSlam() {
+    if (this.muted) return
+    this.init()
+    if (!this.ctx) return
+
+    const now = this.ctx.currentTime
+
+    // 1. Deep Bass Thud (Sub Impact of physical button hitting the console)
+    const subOsc = this.ctx.createOscillator()
+    const subGain = this.ctx.createGain()
+    subOsc.type = 'triangle'
+    subOsc.frequency.setValueAtTime(150, now)
+    subOsc.frequency.exponentialRampToValueAtTime(35, now + 0.22)
+    subGain.gain.setValueAtTime(0.5, now)
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22)
+    subOsc.connect(subGain)
+    subGain.connect(this.ctx.destination)
+    subOsc.start(now)
+    subOsc.stop(now + 0.22)
+
+    // 2. High metallic click & spring snap
+    const clickOsc = this.ctx.createOscillator()
+    const clickGain = this.ctx.createGain()
+    clickOsc.type = 'square'
+    clickOsc.frequency.setValueAtTime(1800, now)
+    clickOsc.frequency.exponentialRampToValueAtTime(400, now + 0.08)
+    clickGain.gain.setValueAtTime(0.3, now)
+    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08)
+    clickOsc.connect(clickGain)
+    clickGain.connect(this.ctx.destination)
+    clickOsc.start(now)
+    clickOsc.stop(now + 0.08)
+  }
+
+  // Emergency Button Siren (Authentic Among Us Sound)
   playEmergency() {
+    if (this.muted) return
+    this.init()
+
+    // 1. Tactile physical button slam impact
+    this.playButtonSlam()
+
+    // 2. Play authentic Among Us Emergency Meeting audio file
+    try {
+      const audio = new Audio('/sounds/emergency-meeting.mp3')
+      audio.volume = 0.95
+      const playPromise = audio.play()
+      if (playPromise !== undefined) {
+        playPromise.catch((e) => {
+          console.warn('Audio element blocked, using klaxon synth:', e)
+          this.playEmergencySynth()
+        })
+      }
+    } catch (e) {
+      this.playEmergencySynth()
+    }
+  }
+
+  // Klaxon synthesizer fallback replicating Among Us emergency alarm
+  playEmergencySynth() {
+    if (this.muted || !this.ctx) return
+    const now = this.ctx.currentTime
+
+    const tones = [
+      { f: 980, t: 0.05, d: 0.16 },
+      { f: 740, t: 0.22, d: 0.16 },
+      { f: 980, t: 0.45, d: 0.16 },
+      { f: 740, t: 0.62, d: 0.16 },
+      { f: 980, t: 0.85, d: 0.2 },
+      { f: 740, t: 1.08, d: 0.25 },
+    ]
+
+    tones.forEach((tone) => {
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      const filter = this.ctx.createBiquadFilter()
+
+      osc.type = 'sawtooth'
+      osc.frequency.setValueAtTime(tone.f, now + tone.t)
+
+      filter.type = 'bandpass'
+      filter.frequency.setValueAtTime(tone.f, now + tone.t)
+      filter.Q.setValueAtTime(3, now + tone.t)
+
+      gain.gain.setValueAtTime(0.28, now + tone.t)
+      gain.gain.exponentialRampToValueAtTime(0.01, now + tone.t + tone.d)
+
+      osc.connect(filter)
+      filter.connect(gain)
+      gain.connect(this.ctx.destination)
+
+      osc.start(now + tone.t)
+      osc.stop(now + tone.t + tone.d)
+    })
+  }
+
+  // Wire grabbed / pulled
+  playWireGrab() {
     if (this.muted) return
     this.init()
     if (!this.ctx) return
@@ -38,46 +135,51 @@ class SoundEngine {
     const now = this.ctx.currentTime
     const osc = this.ctx.createOscillator()
     const gain = this.ctx.createGain()
-
-    osc.type = 'sawtooth'
-    osc.frequency.setValueAtTime(440, now)
-    osc.frequency.linearRampToValueAtTime(880, now + 0.25)
-    osc.frequency.linearRampToValueAtTime(440, now + 0.5)
-    osc.frequency.linearRampToValueAtTime(880, now + 0.75)
-    osc.frequency.linearRampToValueAtTime(440, now + 1.0)
-
-    gain.gain.setValueAtTime(0.2, now)
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 1.1)
-
+    osc.type = 'triangle'
+    osc.frequency.setValueAtTime(420, now)
+    osc.frequency.exponentialRampToValueAtTime(680, now + 0.06)
+    gain.gain.setValueAtTime(0.12, now)
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06)
     osc.connect(gain)
     gain.connect(this.ctx.destination)
-
     osc.start(now)
-    osc.stop(now + 1.1)
+    osc.stop(now + 0.06)
   }
 
-  // Wire connect / Spark sound
+  // Wire connect / Spark sound with realistic electric crackle & pop
   playSpark() {
     if (this.muted) return
     this.init()
     if (!this.ctx) return
 
     const now = this.ctx.currentTime
-    const osc = this.ctx.createOscillator()
-    const gain = this.ctx.createGain()
 
-    osc.type = 'square'
-    osc.frequency.setValueAtTime(220, now)
-    osc.frequency.exponentialRampToValueAtTime(880, now + 0.1)
+    // 1. Sharp electric arc pop
+    const popOsc = this.ctx.createOscillator()
+    const popGain = this.ctx.createGain()
+    popOsc.type = 'sawtooth'
+    popOsc.frequency.setValueAtTime(1400, now)
+    popOsc.frequency.exponentialRampToValueAtTime(220, now + 0.12)
+    popGain.gain.setValueAtTime(0.3, now)
+    popGain.gain.exponentialRampToValueAtTime(0.01, now + 0.12)
+    popOsc.connect(popGain)
+    popGain.connect(this.ctx.destination)
+    popOsc.start(now)
+    popOsc.stop(now + 0.12)
 
-    gain.gain.setValueAtTime(0.25, now)
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
-
-    osc.connect(gain)
-    gain.connect(this.ctx.destination)
-
-    osc.start(now)
-    osc.stop(now + 0.15)
+    // 2. High-frequency electrical buzz/zap
+    const zapOsc = this.ctx.createOscillator()
+    const zapGain = this.ctx.createGain()
+    zapOsc.type = 'square'
+    zapOsc.frequency.setValueAtTime(880, now)
+    zapOsc.frequency.setValueAtTime(440, now + 0.04)
+    zapOsc.frequency.setValueAtTime(1100, now + 0.08)
+    zapGain.gain.setValueAtTime(0.2, now)
+    zapGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
+    zapOsc.connect(zapGain)
+    zapGain.connect(this.ctx.destination)
+    zapOsc.start(now)
+    zapOsc.stop(now + 0.15)
   }
 
   // Task Complete Chime (Among Us signature task complete ding)
