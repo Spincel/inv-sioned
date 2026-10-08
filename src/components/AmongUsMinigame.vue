@@ -535,7 +535,7 @@ const generateWallpaper = () => {
 
   ctx.fillStyle = '#e2e8f0'
   ctx.font = 'bold 36px monospace'
-  ctx.fillText('SÁBADO 25 DE OCTUBRE • 3:00 PM', 540, 1560)
+  ctx.fillText('DOMINGO 25 DE OCTUBRE • 3:00 PM', 540, 1560)
 
   ctx.fillStyle = '#94a3b8'
   ctx.font = '30px monospace'
