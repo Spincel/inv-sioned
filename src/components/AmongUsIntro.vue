@@ -676,117 +676,170 @@ const launchToShip = () => {
         </div>
 
         <!-- ============================================================== -->
-        <!-- ESCENA 5: PASE ESPECIAL / WALLPAPER HD Y ENTRADA A LA NAVE     -->
+        <!-- ESCENA 5: PASE ESPECIAL / CONFIRMACIÓN Y ENTRADA A LA NAVE     -->
         <!-- ============================================================== -->
         <div v-else-if="scene === 5" key="scene-5" class="py-1 animate-fade-in">
           <!-- Header Badge -->
           <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 rounded-full font-mono text-xs font-bold uppercase tracking-widest mb-2">
             <span>🎫</span>
-            <span>PASE ESPECIAL DE ABORDAJE HD</span>
-          </div>
-
-          <h2 class="text-2xl sm:text-3xl font-black text-white">
-            {{ localConfirmed?.name ? '¡TU PASE ESTÁ LISTO!' : 'CONFIRMA TU TRIPULANTE' }}
-          </h2>
-
-          <!-- TARJETA VISUAL DEL WALLPAPER / PASE ESPECIAL GENERADO -->
-          <div class="my-3 bg-slate-950/80 border-2 border-emerald-400/80 rounded-2xl p-3 sm:p-4 shadow-[0_0_25px_rgba(16,185,129,0.3)] max-w-md mx-auto">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-mono font-bold text-emerald-300 flex items-center gap-1.5">
-                <span>🖼️</span>
-                <span>Fondo de Pantalla / Pase Especial:</span>
-              </span>
-              <span class="text-[10px] font-mono bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/40 font-bold">
-                HD 1080×1920
-              </span>
-            </div>
-
-            <!-- Miniatura interactiva del Wallpaper generado -->
-            <div
-              @click="isFullscreenWallpaper = true"
-              class="relative max-w-[210px] mx-auto rounded-xl overflow-hidden border-2 border-emerald-500/50 shadow-lg group cursor-pointer aspect-[9/16] bg-slate-900"
-            >
-              <img
-                v-if="wallpaperUrl"
-                :src="wallpaperUrl"
-                alt="Pase Especial Wallpaper"
-                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-              <div v-else class="w-full h-full flex items-center justify-center text-xs font-mono text-slate-400">
-                Generando imagen...
-              </div>
-
-              <!-- Overlay Hover -->
-              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <span class="text-white text-[11px] font-mono font-black bg-emerald-900/90 border border-emerald-400 px-2.5 py-1 rounded-full shadow">
-                  🔍 Ver en Grande
-                </span>
-              </div>
-            </div>
-
-            <!-- Botones de Acción para el Wallpaper -->
-            <div class="mt-3 flex items-center justify-center gap-2">
-              <button
-                type="button"
-                @click="handleDownloadWallpaper"
-                class="py-2 px-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black font-mono text-xs rounded-xl shadow transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
-                title="Descargar imagen en alta calidad"
-              >
-                <span>📥</span>
-                <span>Descargar Wallpaper HD</span>
-              </button>
-              <button
-                type="button"
-                @click="isFullscreenWallpaper = true"
-                class="py-2 px-3 bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold rounded-xl transition-all active:scale-95 cursor-pointer flex items-center gap-1"
-                title="Ver imagen completa en pantalla"
-              >
-                <span>👁️</span>
-                <span>Ver Completo</span>
-              </button>
-            </div>
+            <span>PASE OFICIAL DE ABORDAJE</span>
           </div>
 
           <!-- CASO A: SI YA ESTÁ REGISTRADO EN ESTE DISPOSITIVO -->
-          <div v-if="localConfirmed?.name" class="my-3 max-w-md mx-auto">
-            <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-2 border-emerald-400/80 rounded-2xl p-3.5 shadow-[0_0_25px_rgba(16,185,129,0.25)] text-left flex items-center gap-3 relative overflow-hidden">
-              <div class="absolute left-0 top-0 bottom-0 w-2 bg-emerald-400" />
+          <div v-if="localConfirmed?.name" class="my-2 max-w-md mx-auto">
+            <!-- TARJETA: TRIPULANTE REGISTRADO CON SIONED Y EL INVITADO JUNTOS -->
+            <div class="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-2 border-emerald-400/90 rounded-3xl p-4 sm:p-5 shadow-[0_0_35px_rgba(16,185,129,0.35)] text-center relative overflow-hidden">
+              <!-- Glow accent border top -->
+              <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-400 via-cyan-400 to-yellow-400" />
 
-              <div class="flex-shrink-0 pl-1">
-                <CrewmateAvatar
-                  :color="localConfirmed.color || selectedColor.hex"
-                  :shadow-color="localConfirmed.shadowColor || selectedColor.dark"
-                  hat="party-hat"
-                  :size="75"
-                  animation="bounce"
-                />
+              <!-- Badge Superior -->
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 border border-emerald-400/60 rounded-full mb-2 shadow">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span class="font-mono text-xs font-black text-emerald-300 uppercase tracking-wider">
+                  ✅ TRIPULANTE REGISTRADO
+                </span>
               </div>
 
-              <div class="font-mono text-xs space-y-0.5 flex-1 min-w-0">
-                <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">
-                  TRIPULANTE REGISTRADO
-                </span>
-                <p class="text-white text-base font-black truncate">
-                  {{ localConfirmed.name }}
-                </p>
-                <p class="text-slate-300 text-[11px]">
-                  Traje: <span class="text-cyan-300 font-bold">{{ localConfirmed.colorName || selectedColor.name }}</span> • Acompañantes: <span class="text-yellow-300 font-bold">+{{ localConfirmed.companions || 0 }}</span>
-                </p>
-                <span class="inline-block text-[10px] text-emerald-300 font-black bg-emerald-900/60 px-2 py-0.5 rounded-full border border-emerald-500/40">
-                  ✅ MISIÓN ACEPTADA
-                </span>
+              <!-- Mensaje Personalizado de Agradecimiento -->
+              <h3 class="text-xl sm:text-2xl font-black text-white leading-tight">
+                ¡Gracias por acompañarme a la misión! 🚀
+              </h3>
+              <p class="text-xs sm:text-sm text-cyan-200 font-mono mt-1">
+                ¡Hola <strong class="text-yellow-300 text-sm sm:text-base">{{ localConfirmed.name }}</strong>! Qué alegría que vengas a festejar mis 8 años en Chak Jumping Park.
+              </p>
+
+              <!-- LOS DOS AMONG US JUNTOS: Sioned (Especial de Honor) + El Invitado -->
+              <div class="my-3.5 py-2.5 px-3 bg-black/50 rounded-2xl border border-slate-800 flex items-center justify-center gap-5 sm:gap-7 relative">
+                <!-- 1. SIONED (TRIPULANTE ESPECIAL DE HONOR) -->
+                <div class="flex flex-col items-center">
+                  <div class="relative animate-bounce-subtle">
+                    <div class="absolute -top-1.5 -right-1.5 text-base animate-pulse">👑</div>
+                    <CrewmateAvatar
+                      :color="EVENT_CONFIG.celebrant.favoriteColor"
+                      shadow-color="#991b1b"
+                      :hat="EVENT_CONFIG.celebrant.hat"
+                      :size="85"
+                      animation="none"
+                    />
+                  </div>
+                  <span class="mt-1 px-2 py-0.5 bg-red-600/90 text-white font-mono text-[10px] font-black rounded-full border border-red-400 shadow">
+                    Sioned (Honor) 🎂
+                  </span>
+                </div>
+
+                <!-- Destellos y Unión en Medio -->
+                <div class="flex flex-col items-center">
+                  <span class="text-2xl animate-pulse">✨</span>
+                  <span class="text-[10px] font-mono text-cyan-300 font-bold uppercase tracking-wider">¡Juntos!</span>
+                </div>
+
+                <!-- 2. EL INVITADO (CON SU COLOR PERSONALIZADO) -->
+                <div class="flex flex-col items-center">
+                  <div class="relative animate-bounce-subtle" style="animation-delay: 0.25s">
+                    <CrewmateAvatar
+                      :color="localConfirmed.color || selectedColor.hex"
+                      :shadow-color="localConfirmed.shadowColor || selectedColor.dark"
+                      hat="party-hat"
+                      :size="85"
+                      animation="none"
+                    />
+                  </div>
+                  <span class="mt-1 px-2 py-0.5 bg-cyan-600/90 text-white font-mono text-[10px] font-black rounded-full border border-cyan-400 shadow truncate max-w-[110px]">
+                    {{ localConfirmed.name }} ⭐
+                  </span>
+                </div>
+              </div>
+
+              <!-- Datos Resumidos del Pase -->
+              <div class="bg-slate-900/80 border border-slate-700/80 rounded-xl py-2 px-3 font-mono text-xs flex items-center justify-around flex-wrap gap-2 text-slate-300">
+                <div>
+                  <span class="text-[10px] text-slate-400 uppercase block">Traje:</span>
+                  <strong class="text-cyan-300">{{ localConfirmed.colorName || selectedColor.name }}</strong>
+                </div>
+                <div class="w-px h-5 bg-slate-700" />
+                <div>
+                  <span class="text-[10px] text-slate-400 uppercase block">Acompañantes:</span>
+                  <strong class="text-yellow-300">+{{ localConfirmed.companions || 0 }}</strong>
+                </div>
+                <div class="w-px h-5 bg-slate-700" />
+                <div>
+                  <span class="text-[10px] text-slate-400 uppercase block">Estado:</span>
+                  <strong class="text-emerald-400">Confirmado ✅</strong>
+                </div>
               </div>
             </div>
 
-            <!-- Botón Grande de Lanzamiento a la Nave -->
-            <div class="mt-4 space-y-2">
+            <!-- BOTÓN GRANDE DE INGRESAR A LA NAVE ESPACIAL -->
+            <div class="mt-3.5 space-y-2.5">
               <button
                 @click="launchToShip"
-                class="w-full py-4 px-6 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-400 hover:to-green-400 text-slate-950 font-black text-base sm:text-lg uppercase tracking-wider font-mono rounded-2xl shadow-[0_0_35px_rgba(34,197,94,0.7)] transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-3 animate-pulse"
+                class="w-full py-4 px-6 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-400 hover:to-green-400 text-slate-950 font-black text-lg sm:text-xl uppercase tracking-wider font-mono rounded-2xl shadow-[0_0_40px_rgba(34,197,94,0.7)] transition-all duration-200 hover:scale-[1.02] active:scale-95 cursor-pointer flex items-center justify-center gap-3 animate-pulse"
               >
                 <span>¡INGRESAR A LA NAVE ESPACIAL!</span>
                 <span class="text-2xl">🚀</span>
               </button>
+
+              <!-- ÁREA PARA DESCARGAR EL WALLPAPER (COMPACTA Y ELEGANTE) -->
+              <div class="bg-slate-900/90 border border-cyan-500/40 rounded-2xl p-2 sm:p-2.5 flex items-center justify-between gap-2 shadow-md">
+                <div class="flex items-center gap-2.5 min-w-0 pl-1">
+                  <!-- Miniatura con lupa para ver grande -->
+                  <div
+                    @click="isFullscreenWallpaper = true"
+                    class="w-9 h-12 rounded-lg overflow-hidden border border-emerald-400 shadow flex-shrink-0 cursor-pointer group relative bg-black"
+                    title="Toca para ver el fondo en pantalla completa"
+                  >
+                    <img
+                      v-if="wallpaperUrl"
+                      :src="wallpaperUrl"
+                      alt="Wallpaper"
+                      class="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                    />
+                    <div class="absolute inset-0 bg-black/25 flex items-center justify-center">
+                      <span class="text-[9px]">🔍</span>
+                    </div>
+                  </div>
+
+                  <div class="text-left font-mono min-w-0">
+                    <p class="text-white font-bold truncate text-[11px] sm:text-xs">
+                      Fondo de Pantalla / Pase HD
+                    </p>
+                    <p class="text-slate-400 text-[10px] truncate">
+                      1080×1920 con tu nombre y Sioned
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-1.5 flex-shrink-0 pr-1">
+                  <button
+                    type="button"
+                    @click="handleDownloadWallpaper"
+                    class="py-2 px-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black font-mono text-[11px] sm:text-xs rounded-xl shadow transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                    title="Descargar imagen en alta definición"
+                  >
+                    <span>📥</span>
+                    <span>Descargar</span>
+                  </button>
+                  <button
+                    type="button"
+                    @click="isFullscreenWallpaper = true"
+                    class="py-2 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[11px] rounded-xl border border-slate-600 transition-all active:scale-95 cursor-pointer"
+                    title="Ver en Grande"
+                  >
+                    👁️
+                  </button>
+                </div>
+              </div>
+
+              <!-- Editar datos si es necesario -->
+              <div class="text-center pt-0.5">
+                <button
+                  type="button"
+                  @click="localConfirmed = null"
+                  class="text-[11px] font-mono text-slate-400 hover:text-white underline cursor-pointer"
+                >
+                  ✏️ Editar mis datos de confirmación
+                </button>
+              </div>
             </div>
           </div>
 

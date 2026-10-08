@@ -1,7 +1,95 @@
 // Generador de Fondos de Pantalla / Pases de Abordaje HD (1080x1920) temático de Among Us
 
+function drawCrewmate(ctx, { x, y, scale = 1, color = '#ef4444', shadowColor = '#991b1b', hat = 'party-hat', hasCrown = false }) {
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.scale(scale, scale)
+
+  // Mochila de oxígeno
+  ctx.fillStyle = shadowColor || '#dc2626'
+  ctx.beginPath()
+  ctx.roundRect(-215, -110, 70, 215, 35)
+  ctx.fill()
+  ctx.lineWidth = 16
+  ctx.strokeStyle = '#0c0d14'
+  ctx.stroke()
+
+  // Cuerpo
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.roundRect(-155, -185, 310, 370, [155, 155, 45, 45])
+  ctx.fill()
+  ctx.lineWidth = 18
+  ctx.strokeStyle = '#0c0d14'
+  ctx.stroke()
+
+  // Visor
+  ctx.fillStyle = '#67e8f9'
+  ctx.beginPath()
+  ctx.roundRect(-55, -125, 230, 125, 60)
+  ctx.fill()
+  ctx.lineWidth = 16
+  ctx.strokeStyle = '#0c0d14'
+  ctx.stroke()
+
+  // Reflejo en Visor
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
+  ctx.beginPath()
+  ctx.roundRect(-15, -110, 125, 45, 20)
+  ctx.fill()
+
+  // Gorrito de Fiesta
+  if (hat === 'party-hat') {
+    ctx.fillStyle = '#f43f5e'
+    ctx.beginPath()
+    ctx.moveTo(0, -315)
+    ctx.lineTo(-75, -185)
+    ctx.lineTo(75, -185)
+    ctx.closePath()
+    ctx.fill()
+    ctx.lineWidth = 14
+    ctx.strokeStyle = '#0c0d14'
+    ctx.stroke()
+
+    ctx.fillStyle = '#fbbf24'
+    ctx.beginPath()
+    ctx.moveTo(-35, -230)
+    ctx.lineTo(35, -230)
+    ctx.lineTo(45, -205)
+    ctx.lineTo(-45, -205)
+    ctx.closePath()
+    ctx.fill()
+
+    ctx.fillStyle = '#facc15'
+    ctx.beginPath()
+    ctx.arc(0, -320, 20, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
+  }
+
+  // Corona para festejada
+  if (hasCrown) {
+    ctx.fillStyle = '#facc15'
+    ctx.beginPath()
+    ctx.moveTo(-30, -340)
+    ctx.lineTo(-45, -385)
+    ctx.lineTo(-15, -360)
+    ctx.lineTo(0, -395)
+    ctx.lineTo(15, -360)
+    ctx.lineTo(45, -385)
+    ctx.lineTo(30, -340)
+    ctx.closePath()
+    ctx.fill()
+    ctx.strokeStyle = '#854d0e'
+    ctx.lineWidth = 6
+    ctx.stroke()
+  }
+
+  ctx.restore()
+}
+
 export function generateWallpaperDataUrl({
-  guestName = 'Tripulante',
+  guestName = '',
   guestColor = '#06b6d4',
   guestColorName = 'Cian',
   celebrantName = 'Sioned',
@@ -64,73 +152,64 @@ export function generateWallpaperDataUrl({
   ctx.font = 'bold 34px monospace'
   ctx.fillText('TRIPULANTE DE HONOR • REUNIÓN DE EMERGENCIA', 540, 330)
 
-  // 6. Ilustración del Tripulante Festejado (Sioned en Rojo con Sombrero de Fiesta)
-  ctx.save()
-  ctx.translate(540, 660)
+  // 6. Ilustración de los Tripulantes: Sioned (Honor) y el Invitado celebrando juntos
+  const hasGuest = Boolean(guestName && guestName.trim() && guestName !== 'TRIPULANTE INVITADO')
+  
+  if (hasGuest) {
+    // Sioned (Izquierda)
+    drawCrewmate(ctx, {
+      x: 350,
+      y: 690,
+      scale: 0.72,
+      color: '#ef4444',
+      shadowColor: '#991b1b',
+      hat: 'party-hat',
+      hasCrown: true,
+    })
 
-  // Mochila de oxígeno
-  ctx.fillStyle = '#dc2626'
-  ctx.beginPath()
-  ctx.roundRect(-215, -110, 70, 215, 35)
-  ctx.fill()
-  ctx.lineWidth = 16
-  ctx.strokeStyle = '#0c0d14'
-  ctx.stroke()
+    // Invitado (Derecha)
+    const colorShadowMap = {
+      '#ef4444': '#991b1b',
+      '#06b6d4': '#0e7490',
+      '#ec4899': '#be185d',
+      '#eab308': '#a16207',
+      '#84cc16': '#4d7c0f',
+      '#a855f7': '#7e22ce',
+      '#f97316': '#c2410c',
+      '#e2e8f0': '#94a3b8',
+    }
+    const guestShadow = colorShadowMap[guestColor] || '#0e7490'
 
-  // Cuerpo
-  ctx.fillStyle = '#ef4444'
-  ctx.beginPath()
-  ctx.roundRect(-155, -185, 310, 370, [155, 155, 45, 45])
-  ctx.fill()
-  ctx.lineWidth = 18
-  ctx.strokeStyle = '#0c0d14'
-  ctx.stroke()
+    drawCrewmate(ctx, {
+      x: 730,
+      y: 690,
+      scale: 0.72,
+      color: guestColor || '#06b6d4',
+      shadowColor: guestShadow,
+      hat: 'party-hat',
+      hasCrown: false,
+    })
 
-  // Visor
-  ctx.fillStyle = '#67e8f9'
-  ctx.beginPath()
-  ctx.roundRect(-55, -125, 230, 125, 60)
-  ctx.fill()
-  ctx.lineWidth = 16
-  ctx.strokeStyle = '#0c0d14'
-  ctx.stroke()
+    // Badges con nombres debajo de cada uno
+    ctx.fillStyle = '#ef4444'
+    ctx.font = 'bold 26px monospace'
+    ctx.fillText('👑 SIONED (HONOR)', 350, 855)
 
-  // Reflejo en Visor
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
-  ctx.beginPath()
-  ctx.roundRect(-15, -110, 125, 45, 20)
-  ctx.fill()
-
-  // Gorrito de Fiesta
-  ctx.fillStyle = '#f43f5e'
-  ctx.beginPath()
-  ctx.moveTo(0, -315)
-  ctx.lineTo(-75, -185)
-  ctx.lineTo(75, -185)
-  ctx.closePath()
-  ctx.fill()
-  ctx.lineWidth = 14
-  ctx.strokeStyle = '#0c0d14'
-  ctx.stroke()
-
-  // Franjas en el gorrito
-  ctx.fillStyle = '#fbbf24'
-  ctx.beginPath()
-  ctx.moveTo(-35, -230)
-  ctx.lineTo(35, -230)
-  ctx.lineTo(45, -205)
-  ctx.lineTo(-45, -205)
-  ctx.closePath()
-  ctx.fill()
-
-  // Pompom
-  ctx.fillStyle = '#facc15'
-  ctx.beginPath()
-  ctx.arc(0, -320, 20, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.stroke()
-
-  ctx.restore()
+    ctx.fillStyle = '#38bdf8'
+    ctx.font = 'bold 26px monospace'
+    ctx.fillText(`⭐ ${guestName.toUpperCase()}`, 730, 855)
+  } else {
+    // Solo Sioned centrada
+    drawCrewmate(ctx, {
+      x: 540,
+      y: 660,
+      scale: 0.95,
+      color: '#ef4444',
+      shadowColor: '#991b1b',
+      hat: 'party-hat',
+      hasCrown: true,
+    })
+  }
 
   // 7. Tarjeta VIP de Pase de Abordaje para el Invitado
   const cardY = 980
@@ -153,8 +232,8 @@ export function generateWallpaperDataUrl({
   ctx.fillText(displayGuest.toUpperCase(), 540, cardY + 135)
 
   ctx.fillStyle = '#38bdf8'
-  ctx.font = 'bold 30px monospace'
-  ctx.fillText(`TRAJE: ${(guestColorName || 'CIAN').toUpperCase()} • MISIÓN ACEPTADA ✅`, 540, cardY + 205)
+  ctx.font = 'bold 32px monospace'
+  ctx.fillText(`TRAJE: ${(guestColorName || 'CIAN').toUpperCase()} • ¡MISIÓN ACEPTADA! ✅`, 540, cardY + 205)
 
   // 8. Tarjeta de Coordenadas, Fecha y Equipamiento
   const infoY = 1285
